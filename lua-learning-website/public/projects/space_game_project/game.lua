@@ -1,7 +1,7 @@
 -- ============================================================
 -- Space Shooter
 -- Your mission: build a space shooter, one step at a time!
--- Open guides/part_0.md to get started.
+-- Open guide.html to get started.
 -- ============================================================
 
 local canvas = require("canvas")

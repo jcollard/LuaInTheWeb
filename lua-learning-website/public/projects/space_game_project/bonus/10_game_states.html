@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bonus 10: Game States: Title, Pause, Game Over</title>
+<style>
+/* ============================================================
+   BASE / RESET
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: #0a0e27;
+    color: #e0e6ff;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ============================================================
+   HEADER + TABS
+   ============================================================ */
+header {
+    background: #101538;
+    border-bottom: 2px solid #1a2050;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-title {
+    text-align: center;
+    padding: 12px 16px 0;
+    font-size: 1.3em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #a0a8e0;
+}
+
+.tab-bar {
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px 0;
+    overflow-x: auto;
+}
+
+.tab-bar button {
+    background: transparent;
+    border: none;
+    color: #808cc0;
+    padding: 10px 18px;
+    font-size: 0.95em;
+    font-family: inherit;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-bar button:hover {
+    color: #b0b8f0;
+}
+
+.tab-bar button.active {
+    color: #e0e6ff;
+    border-bottom-color: #6c63ff;
+    font-weight: 600;
+}
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+main {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+.part { display: none; }
+.part.active { display: block; }
+
+.part > h1 {
+    font-size: 1.8em;
+    margin-bottom: 4px;
+    color: #fff;
+}
+
+.part > .subtitle {
+    font-size: 1.1em;
+    color: #8890c0;
+    margin-bottom: 28px;
+}
+
+/* ============================================================
+   CONCEPTS SECTION
+   ============================================================ */
+.concepts {
+    background: #121640;
+    border: 1px solid #1e2460;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+}
+
+.concepts h2 {
+    font-size: 1.15em;
+    color: #a0a8e0;
+    margin-bottom: 12px;
+}
+
+.concepts p, .concepts li {
+    margin-bottom: 8px;
+    color: #c0c8f0;
+}
+
+.concepts ul, .concepts ol {
+    padding-left: 24px;
+    margin-bottom: 8px;
+}
+
+.concepts strong { color: #e0e6ff; }
+
+.concepts .concept-code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: #0d1030;
+    color: #82aaff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.92em;
+}
+
+/* ============================================================
+   STEPS
+   ============================================================ */
+.step {
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    border-left: 4px solid;
+}
+
+.step-copy {
+    background: #0d1a2c;
+    border-left-color: #00bcd4;
+}
+
+.step-challenge {
+    background: #1a1510;
+    border-left-color: #ff9800;
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #e0e6ff;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.badge-copy {
+    background: #00bcd4;
+    color: #001820;
+}
+
+.badge-challenge {
+    background: #ff9800;
+    color: #1a0e00;
+}
+
+.step-location {
+    font-size: 0.9em;
+    color: #8890c0;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
+.step-desc, .step-task {
+    margin-bottom: 12px;
+    color: #c0c8f0;
+}
+
+.step-desc strong, .step-task strong { color: #e0e6ff; }
+
+.step-note {
+    background: #0a1028;
+    border-left: 3px solid #2196f3;
+    padding: 8px 14px;
+    margin-top: 10px;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.92em;
+    color: #90a0d0;
+}
+
+/* ============================================================
+   CODE BLOCKS
+   ============================================================ */
+pre.code-block {
+    background: #0d1030;
+    border: 1px solid #1a2050;
+    border-radius: 6px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    margin: 8px 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+pre.code-block code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.92em;
+    line-height: 1.55;
+    color: #eeffff;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Inline code in descriptions */
+.step-desc code, .step-task code, .step-note code,
+.concepts code, .hint code, p code, li code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: #0d1030;
+    color: #82aaff;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+/* ============================================================
+   SYNTAX HIGHLIGHTING
+   ============================================================ */
+.kw  { color: #c792ea; }   /* keywords */
+.str { color: #c3e88d; }   /* strings */
+.cm  { color: #809aa5; }   /* comments */
+.num { color: #f78c6c; }   /* numbers */
+.fn  { color: #82aaff; }   /* function calls */
+
+/* ============================================================
+   HINTS + SOLUTIONS
+   ============================================================ */
+.hints-container {
+    margin: 8px 0;
+}
+
+.hint {
+    background: #141028;
+    border: 1px solid #2a2060;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin: 8px 0;
+    color: #b0b8e0;
+    font-size: 0.95em;
+}
+
+.hint strong { color: #e0e6ff; }
+
+.solution {
+    margin: 8px 0;
+}
+
+.btn-hint, .btn-solution {
+    border: none;
+    padding: 8px 18px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 6px 6px 6px 0;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.btn-hint:active, .btn-solution:active {
+    transform: scale(0.97);
+}
+
+.btn-hint {
+    background: #6c63ff;
+    color: #fff;
+}
+
+.btn-hint:hover { background: #7d75ff; }
+
+.btn-solution {
+    background: #ff9800;
+    color: #1a0e00;
+}
+
+.btn-solution:hover { background: #ffad33; }
+
+/* ============================================================
+   CHECK YOUR WORK + STUCK
+   ============================================================ */
+.check-work {
+    background: #0d1830;
+    border: 1px solid #1a2850;
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin-top: 32px;
+}
+
+.check-work h2 {
+    font-size: 1.1em;
+    color: #4caf50;
+    margin-bottom: 10px;
+}
+
+.check-work ul {
+    padding-left: 24px;
+}
+
+.check-work li {
+    margin-bottom: 6px;
+    color: #b0c0d0;
+}
+
+.stuck {
+    margin-top: 16px;
+    padding: 12px 18px;
+    background: #10101a;
+    border-radius: 6px;
+    color: #7880a0;
+    font-size: 0.9em;
+}
+
+.stuck code {
+    color: #82aaff;
+}
+
+.btn-stuck {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+
+.btn-stuck:hover {
+    color: #a0a8d0;
+}
+
+.btn-stuck code {
+    color: #82aaff;
+}
+
+.stuck-code {
+    margin-top: 12px;
+    max-height: 600px;
+    overflow-y: auto;
+    border-radius: 6px;
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+#toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #ff9800;
+    color: #1a0e00;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95em;
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+    z-index: 200;
+    pointer-events: none;
+}
+
+#toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+/* ============================================================
+   SEPARATOR
+   ============================================================ */
+.sep {
+    border: none;
+    border-top: 1px solid #1a2050;
+    margin: 24px 0;
+}
+
+/* ============================================================
+   DELETE INSTRUCTION
+   ============================================================ */
+.delete-block {
+    background: #1a0d0d;
+    border: 1px solid #3a1515;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 8px 0;
+}
+
+.delete-block .delete-label {
+    color: #e05050;
+    font-weight: 700;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+
+.delete-block pre.code-block {
+    border-color: #3a1515;
+    opacity: 0.7;
+}
+
+/* ============================================================
+   BONUS PAGES
+   ============================================================ */
+.tier {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+.tier-1 { background: #2e7d32; color: #e8ffe8; }
+.tier-2 { background: #1565c0; color: #e8f0ff; }
+.tier-3 { background: #8e24aa; color: #fbe8ff; }
+
+.before-start {
+    background: #10182e;
+    border: 1px solid #24305a;
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    color: #b0b8e0;
+    font-size: 0.95em;
+}
+.before-start strong { color: #e0e6ff; }
+.before-start ul { padding-left: 22px; margin-top: 6px; }
+.before-start li { margin-bottom: 4px; }
+
+.stretch {
+    background: #1a1028;
+    border: 1px solid #3a2060;
+    border-radius: 8px;
+    padding: 16px 22px;
+    margin-top: 24px;
+}
+.stretch h2 { font-size: 1.05em; color: #ce93d8; margin-bottom: 8px; }
+.stretch ul { padding-left: 24px; }
+.stretch li { margin-bottom: 6px; color: #c0b0d8; }
+
+.reference h2 { font-size: 1.1em; color: #a0a8e0; margin-bottom: 10px; }
+.reference {
+    margin-top: 32px;
+    padding: 18px 24px;
+    background: #10101a;
+    border-radius: 8px;
+}
+.warning {
+    background: #2a1a08;
+    border-left: 4px solid #ff9800;
+    padding: 10px 16px;
+    border-radius: 0 6px 6px 0;
+    color: #ffcc80;
+    margin-bottom: 12px;
+    font-size: 0.95em;
+}
+.warning strong { color: #ffe0b2; }
+
+.challenge-list { list-style: none; padding: 0; }
+.challenge-list li {
+    background: #121640;
+    border: 1px solid #1e2460;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin-bottom: 10px;
+}
+.challenge-list .file { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; color: #82aaff; font-size: 0.9em; }
+.challenge-list .title { font-weight: 700; color: #fff; }
+.challenge-list .summary { color: #a0a8d0; font-size: 0.95em; margin-top: 4px; }
+.challenge-list .req { color: #8088b8; font-size: 0.85em; margin-top: 4px; font-style: italic; }
+.tier-heading { margin: 28px 0 12px; font-size: 1.25em; color: #e0e6ff; }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">SPACE SHOOTER &mdash; BONUS CHALLENGES</div>
+    <div style="height: 10px"></div>
+</header>
+
+<main>
+<div class="part active">
+    <h1><span class="tier tier-3">★★★ STRUCTURE</span>Bonus 10: Game States: Title, Pause, Game Over</h1>
+    <p class="subtitle">Replace the game_over flag with a single state variable, then add a title screen and a pause button.</p>
+
+    <div class="before-start">
+        <strong>Before you start</strong>
+        <ul>
+            <li><strong>Prerequisites:</strong> None &mdash; start from your finished Part 7 game.</li>
+            <li><strong>New files for this challenge:</strong> <code>fonts/kenvector_future.ttf</code></li>
+            <li>Make a backup copy of your <code>game.lua</code> first, so you can always go back.</li>
+            <li>Bonus challenges give you less help than the main guide. Work out <em>where</em> each piece of code goes, and use the hints if you get stuck.</li>
+        </ul>
+    </div>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><strong>Game states</strong> &mdash; real games are made of screens: a title screen, the game itself, a pause screen, a game over screen. The game is always in exactly <em>one</em> of them.</li>
+            <li><strong>One string beats many booleans</strong> &mdash; with <code>game_over</code>, <code>paused</code>, and <code>on_title</code> as three separate <code>true</code>/<code>false</code> flags, nothing stops two of them being <code>true</code> at once. Paused <em>and</em> game over? On the title screen <em>and</em> paused? With one <code>state</code> variable, those impossible combinations simply can't happen.</li>
+            <li><strong>if / elseif chains</strong> &mdash; <code>if state == "title" then ... elseif state == "playing" then ... end</code> runs exactly one branch, so each screen gets its own input, update, and drawing rules.</li>
+            <li><strong>Custom fonts</strong> &mdash; <code>canvas.assets.load_font(name, file)</code> loads a font file, and <code>canvas.set_font_family(name)</code> switches to it. The normal font is called <code>"monospace"</code>.</li>
+        </ul>
+    </div>
+
+    <!-- Step: load the font -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Load the title font</div>
+        <div class="step-location">Where: at the top, after <code>canvas.assets.add_path("images")</code>, and after the image loading lines</div>
+        <pre class="code-block"><code class="lua">-- At the top, after canvas.assets.add_path("images")
+canvas.assets.add_path("fonts")
+
+-- After the "Load images" lines
+-- Load fonts
+canvas.assets.load_font("future", "kenvector_future.ttf")</code></pre>
+        <div class="step-desc">This tells the game to look in the <code>fonts/</code> folder and loads <code>kenvector_future.ttf</code> under the name <code>"future"</code>. Later, <code>canvas.set_font_family("future")</code> makes all text drawn after it use that font, and <code>canvas.set_font_family("monospace")</code> switches back to the normal font. The font stays switched until you change it again &mdash; even into the next frame &mdash; so always switch back when you're done.</div>
+    </div>
+
+    <!-- Task 1 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Replace <code>game_over</code> with <code>state</code></div>
+        <div class="step-task">Delete the <code>game_over</code> variable and add a <code>state</code> variable that starts as <code>"title"</code>. When the ship hits a meteor, set <code>state</code> to <code>"game_over"</code>. Remove the <code>game_over = false</code> line from <code>reset_game()</code>.</div>
+        <div class="step-note">Careful: Lua <em>won't</em> warn you about leftover uses of <code>game_over</code>. A name that doesn't exist is just <code>nil</code>, and <code>nil</code> counts as false. Use your editor's search to find every <code>game_over</code> &mdash; the next tasks replace the rest of them. The game won't work properly until you've finished Task 5.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Write a comment listing all four possible values, so you (and anyone reading your code) know what <code>state</code> can be.</div>
+            <div class="hint" hidden>In the ship vs meteor collision loop, <code>game_over = true</code> becomes <code>state = "game_over"</code>. Spell the strings exactly the same everywhere &mdash; <code>"game_over"</code> and <code>"gameover"</code> are different strings!</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- In GAME STATE (replaces the game_over variable)
+-- Game state: "title", "playing", "paused", or "game_over"
+local state = "title"
+
+-- In update(), ship vs meteor collision
+state = "game_over"
+return</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 2 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Input for each state</div>
+        <div class="step-task">Rewrite <code>user_input()</code> as one <code>if</code>/<code>elseif</code> chain with a branch for each state:
+            <ul style="padding-left: 24px; margin-top: 6px;">
+                <li><strong>title</strong>: ENTER calls <code>reset_game()</code> and switches to <code>"playing"</code></li>
+                <li><strong>playing</strong>: P switches to <code>"paused"</code>; the arrow keys and SPACE work like before</li>
+                <li><strong>paused</strong>: P switches back to <code>"playing"</code></li>
+                <li><strong>game_over</strong>: ENTER switches to <code>"title"</code></li>
+            </ul>
+        </div>
+        <div class="step-note">Why does game over go back to the title instead of straight into a new game? Now <code>reset_game()</code> is called in exactly <em>one</em> place: when you leave the title screen. Every new game starts the same way, and the player gets a breather between rounds.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Start with the shape: <code>if state == "title" then</code> &hellip; <code>elseif state == "playing" then</code> &hellip; <code>elseif state == "paused" then</code> &hellip; <code>elseif state == "game_over" then</code> &hellip; <code>end</code>. Then fill in each branch.</div>
+            <div class="hint" hidden>The movement and firing code moves inside the <code>"playing"</code> branch. The old <code>if game_over then ... return end</code> block at the top isn't needed anymore &mdash; the chain does that job.</div>
+            <div class="hint" hidden>Use <code>is_key_pressed</code> (not <code>is_key_down</code>) for P and ENTER. Otherwise holding P for a moment would flip between paused and playing every frame!</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">local function user_input()
+    local dt = canvas.get_delta()
+
+    if state == "title" then
+        -- Start a fresh game
+        if canvas.is_key_pressed(canvas.keys.ENTER) then
+            reset_game()
+            state = "playing"
+        end
+
+    elseif state == "playing" then
+        -- Pause
+        if canvas.is_key_pressed(canvas.keys.P) then
+            state = "paused"
+        end
+
+        -- Ship movement
+        if canvas.is_key_down(canvas.keys.LEFT) then ship_x = ship_x - ship_speed * dt end
+        if canvas.is_key_down(canvas.keys.RIGHT) then ship_x = ship_x + ship_speed * dt end
+        if canvas.is_key_down(canvas.keys.UP) then ship_y = ship_y - ship_speed * dt end
+        if canvas.is_key_down(canvas.keys.DOWN) then ship_y = ship_y + ship_speed * dt end
+
+        -- Fire laser
+        if canvas.is_key_pressed(canvas.keys.SPACE) then
+            spawn_laser(ship_x + ship_w / 2 - laser_w / 2, ship_y)
+        end
+
+    elseif state == "paused" then
+        -- Unpause
+        if canvas.is_key_pressed(canvas.keys.P) then
+            state = "playing"
+        end
+
+    elseif state == "game_over" then
+        -- Back to the title screen
+        if canvas.is_key_pressed(canvas.keys.ENTER) then
+            state = "title"
+        end
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 3 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Update only what should move</div>
+        <div class="step-task">Move the star-moving loop out of <code>update()</code> into its own function, <code>move_stars(dt)</code>. Then change the top of <code>update()</code> so that on the title screen <em>only</em> the stars move, and when paused or game over <em>nothing</em> moves. The normal update code should only run while <code>"playing"</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Put <code>move_stars</code> right after <code>init_stars()</code> so it's defined before <code>update()</code> uses it. It's the same loop as before, just wrapped in <code>local function move_stars(dt) ... end</code>.</div>
+            <div class="hint" hidden>At the end of <code>update()</code>, the old star loop becomes one line: <code>move_stars(dt)</code>. At the top, replace <code>if game_over then return end</code> with two checks.</div>
+            <div class="hint" hidden>First: <code>if state == "title" then move_stars(dt) return end</code>. Second: <code>if state ~= "playing" then return end</code>. Remember <code>~=</code> means &ldquo;not equal&rdquo;. You need <code>dt</code> before both, so get it first.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- After init_stars()
+local function move_stars(dt)
+    for i, star in ipairs(stars) do
+        star.y = star.y + star.speed * dt
+        if star.y &gt; SCREEN_H then
+            star.x = math.random(0, SCREEN_W)
+            star.y = -star.size
+        end
+    end
+end
+
+-- Top of update()
+local dt = canvas.get_delta()
+
+-- Title screen: only the stars move
+if state == "title" then
+    move_stars(dt)
+    return
+end
+
+-- Paused or game over: nothing moves
+if state ~= "playing" then return end
+
+-- End of update() (replaces the old star loop)
+-- Move stars
+move_stars(dt)</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 4 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Draw the title screen</div>
+        <div class="step-task">Write a <code>draw_title()</code> function (above <code>draw()</code>) that shows <code>"SPACE SHOOTER"</code> centered in the <code>"future"</code> font, with <code>"Press ENTER to start"</code> and the controls underneath in the normal font. In <code>draw()</code>, right after the stars, call <code>draw_title()</code> and <code>return</code> when the state is <code>"title"</code> &mdash; so the title screen shows only stars and text, no ship or HUD.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Center text the same way as the GAME OVER text: measure it with <code>canvas.get_text_width()</code>, then draw at <code>(SCREEN_W - width) / 2</code>. Set the font family and size <em>before</em> measuring, because they change the width.</div>
+            <div class="hint" hidden>Call <code>canvas.set_font_family("future")</code> before the title, then <code>canvas.set_font_family("monospace")</code> before the rest. If you forget to switch back, your HUD will be in the sci-fi font too!</div>
+            <div class="hint" hidden>Try font size 48 for the title at <code>y = 200</code>, size 24 for the start text at <code>y = 320</code>, and size 16 for the controls at <code>y = 370</code>. Add <code>| P: Pause</code> to the controls text in the HUD too.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">local function draw_title()
+    -- Game name in the sci-fi font
+    canvas.set_font_family("future")
+    canvas.set_font_size(48)
+    canvas.set_color(255, 200, 50)
+    local title = "SPACE SHOOTER"
+    local title_w = canvas.get_text_width(title)
+    canvas.draw_text((SCREEN_W - title_w) / 2, 200, title)
+
+    -- Everything else in the normal font
+    canvas.set_font_family("monospace")
+    canvas.set_font_size(24)
+    canvas.set_color(255, 255, 255)
+    local start_text = "Press ENTER to start"
+    local start_w = canvas.get_text_width(start_text)
+    canvas.draw_text((SCREEN_W - start_w) / 2, 320, start_text)
+
+    canvas.set_font_size(16)
+    canvas.set_color(180, 180, 200)
+    local help_text = "Arrow keys: Move | SPACE: Shoot | P: Pause"
+    local help_w = canvas.get_text_width(help_text)
+    canvas.draw_text((SCREEN_W - help_w) / 2, 370, help_text)
+end
+
+-- In draw(), right after the stars loop
+-- Title screen: just stars and the title, no ship or HUD
+if state == "title" then
+    draw_title()
+    return
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 5 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 5: Pause and game over overlays</div>
+        <div class="step-task">Write a <code>draw_paused()</code> function that covers the screen with a see-through dark rectangle and shows <code>"PAUSED"</code> and <code>"Press P to resume"</code> in the middle. Call it at the end of <code>draw()</code> when the state is <code>"paused"</code>. Then fix the game over overlay to check <code>state</code>, and change its prompt to <code>"Press ENTER to continue"</code> (it goes to the title now, not straight to a new game).</div>
+        <div class="step-note">The pause overlay is drawn <em>on top of</em> the ship, meteors, and lasers. Because <code>update()</code> isn't moving anything, they sit frozen behind the overlay &mdash; exactly how a pause screen should look.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Copy the shape of the game over overlay: a dark <code>fill_rect</code> over the whole screen, then two lines of centered text. Use a lower alpha (like <code>120</code>) so you can see the frozen game behind it.</div>
+            <div class="hint" hidden>At the bottom of <code>draw()</code>, add <code>if state == "paused" then draw_paused() end</code>, and change <code>if game_over then</code> to <code>if state == "game_over" then</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">local function draw_paused()
+    -- See-through overlay so the frozen game shows behind it
+    canvas.set_color(0, 0, 0, 120)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    canvas.set_font_size(48)
+    canvas.set_color(255, 255, 255)
+    local paused_text = "PAUSED"
+    local paused_w = canvas.get_text_width(paused_text)
+    canvas.draw_text((SCREEN_W - paused_w) / 2, SCREEN_H / 2 - 40, paused_text)
+
+    canvas.set_font_size(24)
+    local resume_text = "Press P to resume"
+    local resume_w = canvas.get_text_width(resume_text)
+    canvas.draw_text((SCREEN_W - resume_w) / 2, SCREEN_H / 2 + 20, resume_text)
+end
+
+-- At the end of draw()
+-- Paused overlay
+if state == "paused" then
+    draw_paused()
+end
+
+-- Game over overlay
+if state == "game_over" then
+    -- ... same as before, but with:
+    local restart_text = "Press ENTER to continue"
+    -- ...
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>The game starts on a title screen: <strong>SPACE SHOOTER</strong> in the sci-fi font, with stars drifting behind it and no ship</li>
+            <li>Pressing ENTER starts the game with score 0</li>
+            <li>Pressing P freezes everything (even the stars) and shows <strong>PAUSED</strong>; pressing P again carries on exactly where you left off</li>
+            <li>While paused, the arrow keys and SPACE do nothing</li>
+            <li>After a crash, the game over screen appears; ENTER takes you back to the title, and ENTER again starts a new game</li>
+            <li>The HUD is still in the normal font, not the sci-fi one</li>
+        </ul>
+    </div>
+
+    <div class="stretch">
+        <h2>Going Further</h2>
+        <ul>
+            <li>Make <strong>Press ENTER to start</strong> blink. (Hint: <code>math.floor(canvas.get_time() * 2) % 2 == 0</code> is <code>true</code> for half of every second.)</li>
+            <li>Use the <code>"future"</code> font for <strong>GAME OVER</strong> and <strong>PAUSED</strong> too. Remember to switch back!</li>
+            <li>Add a fifth state, <code>"get_ready"</code>, that shows <strong>GET READY!</strong> for 2 seconds before <code>"playing"</code> begins. Which branches of your <code>if</code>/<code>elseif</code> chains need a new <code>elseif</code>?</li>
+        </ul>
+    </div>
+
+    <div class="reference">
+        <h2>Reference Solution</h2>
+        <div class="warning"><strong>Read this first:</strong> this is one complete version of <code>game.lua</code> with this challenge finished, built from the Part 7 code. Your game is probably different &mdash; you may have changed numbers, names, or added other bonus features &mdash; so copying it over your file will likely <strong>not</strong> work and could erase your own work. Use it to compare ideas, then make the changes in <em>your</em> version.</div>
+        <div class="stuck">
+            <button class="btn-stuck">Show / hide the complete reference <code>game.lua</code></button>
+            <div class="stuck-code" hidden>
+                <pre class="code-block"><code class="lua">-- ============================================================
+-- Space Shooter — Bonus 10: Game States
+-- A title screen, a pause button, and one state variable to rule them all!
+-- ============================================================
+
+local canvas = require("canvas")
+canvas.assets.add_path("images")
+canvas.assets.add_path("fonts")
+canvas.set_size(800, 600)
+
+local SCREEN_W = 800
+local SCREEN_H = 600
+
+-- ============================================================
+-- GAME STATE
+-- ============================================================
+
+-- Ship
+local ship_x = 370
+local ship_y = 500
+local ship_w = 60
+local ship_h = 48
+local ship_speed = 300
+
+-- Lasers
+local lasers = {}
+local laser_w = 9
+local laser_h = 30
+local laser_speed = 500
+
+-- Meteors
+local meteors = {}
+local meteor_w = 48
+local meteor_h = 48
+local meteor_speed = 150
+
+-- Spawn timer
+local spawn_timer = 0
+local spawn_interval = 2.0
+
+-- Score
+local score = 0
+
+-- Game state: "title", "playing", "paused", or "game_over"
+local state = "title"
+
+-- Stars
+local stars = {}
+local STAR_COUNT = 60
+
+-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")
+canvas.assets.load_image("laser", "laser.png")
+canvas.assets.load_image("meteor", "meteor.png")
+
+-- Load fonts
+canvas.assets.load_font("future", "kenvector_future.ttf")
+
+-- ============================================================
+-- GENERATE STAR
+-- ============================================================
+
+local function generate_star()
+    local size = math.random(1, 3)
+    local speed = size * 30
+    local brightness = size * 60 + 40
+    return {
+        x = math.random(0, SCREEN_W),
+        y = math.random(0, SCREEN_H),
+        size = size,
+        speed = speed,
+        brightness = brightness
+    }
+end
+
+-- ============================================================
+-- INIT STARS
+-- ============================================================
+
+local function init_stars()
+    stars = {}
+    for i = 1, STAR_COUNT do
+        table.insert(stars, generate_star())
+    end
+end
+
+init_stars()
+
+-- ============================================================
+-- MOVE STARS
+-- ============================================================
+
+local function move_stars(dt)
+    for i, star in ipairs(stars) do
+        star.y = star.y + star.speed * dt
+        if star.y &gt; SCREEN_H then
+            star.x = math.random(0, SCREEN_W)
+            star.y = -star.size
+        end
+    end
+end
+
+-- ============================================================
+-- COLLISION DETECTION
+-- ============================================================
+
+local function check_collision(a_x, a_y, a_w, a_h, b_x, b_y, b_w, b_h)
+    return a_x &lt; b_x + b_w
+       and a_x + a_w &gt; b_x
+       and a_y &lt; b_y + b_h
+       and a_y + a_h &gt; b_y
+end
+
+-- ============================================================
+-- SPAWN METEOR
+-- ============================================================
+
+local function spawn_meteor()
+    local meteor = {
+        x = math.random(0, SCREEN_W - meteor_w),
+        y = -meteor_h
+    }
+    table.insert(meteors, meteor)
+end
+
+-- ============================================================
+-- SPAWN LASER
+-- ============================================================
+
+local function spawn_laser(x, y)
+    local laser = {
+        x = x,
+        y = y
+    }
+    table.insert(lasers, laser)
+end
+
+-- ============================================================
+-- RESET GAME
+-- ============================================================
+
+local function reset_game()
+    ship_x = 370
+    ship_y = 500
+    lasers = {}
+    meteors = {}
+    spawn_timer = 0
+    score = 0
+    init_stars()
+end
+
+-- ============================================================
+-- USER INPUT
+-- ============================================================
+
+local function user_input()
+    local dt = canvas.get_delta()
+
+    if state == "title" then
+        -- Start a fresh game
+        if canvas.is_key_pressed(canvas.keys.ENTER) then
+            reset_game()
+            state = "playing"
+        end
+
+    elseif state == "playing" then
+        -- Pause
+        if canvas.is_key_pressed(canvas.keys.P) then
+            state = "paused"
+        end
+
+        -- Ship movement
+        if canvas.is_key_down(canvas.keys.LEFT) then ship_x = ship_x - ship_speed * dt end
+        if canvas.is_key_down(canvas.keys.RIGHT) then ship_x = ship_x + ship_speed * dt end
+        if canvas.is_key_down(canvas.keys.UP) then ship_y = ship_y - ship_speed * dt end
+        if canvas.is_key_down(canvas.keys.DOWN) then ship_y = ship_y + ship_speed * dt end
+
+        -- Fire laser
+        if canvas.is_key_pressed(canvas.keys.SPACE) then
+            spawn_laser(ship_x + ship_w / 2 - laser_w / 2, ship_y)
+        end
+
+    elseif state == "paused" then
+        -- Unpause
+        if canvas.is_key_pressed(canvas.keys.P) then
+            state = "playing"
+        end
+
+    elseif state == "game_over" then
+        -- Back to the title screen
+        if canvas.is_key_pressed(canvas.keys.ENTER) then
+            state = "title"
+        end
+    end
+end
+
+-- ============================================================
+-- UPDATE
+-- ============================================================
+
+local function update()
+    local dt = canvas.get_delta()
+
+    -- Title screen: only the stars move
+    if state == "title" then
+        move_stars(dt)
+        return
+    end
+
+    -- Paused or game over: nothing moves
+    if state ~= "playing" then return end
+
+    -- Clamp ship to screen
+    ship_x = math.max(0, math.min(SCREEN_W - ship_w, ship_x))
+    ship_y = math.max(0, math.min(SCREEN_H - ship_h, ship_y))
+
+    -- Move lasers and remove off-screen ones
+    for i = #lasers, 1, -1 do
+        lasers[i].y = lasers[i].y - laser_speed * dt
+        if lasers[i].y + laser_h &lt; 0 then
+            table.remove(lasers, i)
+        end
+    end
+
+    -- Spawn timer
+    spawn_timer = spawn_timer + dt
+    if spawn_timer &gt;= spawn_interval then
+        spawn_meteor()
+        spawn_timer = 0
+    end
+
+    -- Move meteors and remove off-screen ones
+    for i = #meteors, 1, -1 do
+        meteors[i].y = meteors[i].y + meteor_speed * dt
+        if meteors[i].y &gt; SCREEN_H then
+            table.remove(meteors, i)
+        end
+    end
+
+    -- Laser vs meteor collision
+    for i = #lasers, 1, -1 do
+        for j = #meteors, 1, -1 do
+            if check_collision(lasers[i].x, lasers[i].y, laser_w, laser_h,
+                               meteors[j].x, meteors[j].y, meteor_w, meteor_h) then
+                table.remove(meteors, j)
+                table.remove(lasers, i)
+                score = score + 1
+                break
+            end
+        end
+    end
+
+    -- Ship vs meteor collision
+    for i, meteor in ipairs(meteors) do
+        if check_collision(ship_x, ship_y, ship_w, ship_h,
+                           meteor.x, meteor.y, meteor_w, meteor_h) then
+            state = "game_over"
+            return
+        end
+    end
+
+    -- Move stars
+    move_stars(dt)
+end
+
+-- ============================================================
+-- DRAW TITLE
+-- ============================================================
+
+local function draw_title()
+    -- Game name in the sci-fi font
+    canvas.set_font_family("future")
+    canvas.set_font_size(48)
+    canvas.set_color(255, 200, 50)
+    local title = "SPACE SHOOTER"
+    local title_w = canvas.get_text_width(title)
+    canvas.draw_text((SCREEN_W - title_w) / 2, 200, title)
+
+    -- Everything else in the normal font
+    canvas.set_font_family("monospace")
+    canvas.set_font_size(24)
+    canvas.set_color(255, 255, 255)
+    local start_text = "Press ENTER to start"
+    local start_w = canvas.get_text_width(start_text)
+    canvas.draw_text((SCREEN_W - start_w) / 2, 320, start_text)
+
+    canvas.set_font_size(16)
+    canvas.set_color(180, 180, 200)
+    local help_text = "Arrow keys: Move | SPACE: Shoot | P: Pause"
+    local help_w = canvas.get_text_width(help_text)
+    canvas.draw_text((SCREEN_W - help_w) / 2, 370, help_text)
+end
+
+-- ============================================================
+-- DRAW PAUSED
+-- ============================================================
+
+local function draw_paused()
+    -- See-through overlay so the frozen game shows behind it
+    canvas.set_color(0, 0, 0, 120)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    canvas.set_font_size(48)
+    canvas.set_color(255, 255, 255)
+    local paused_text = "PAUSED"
+    local paused_w = canvas.get_text_width(paused_text)
+    canvas.draw_text((SCREEN_W - paused_w) / 2, SCREEN_H / 2 - 40, paused_text)
+
+    canvas.set_font_size(24)
+    local resume_text = "Press P to resume"
+    local resume_w = canvas.get_text_width(resume_text)
+    canvas.draw_text((SCREEN_W - resume_w) / 2, SCREEN_H / 2 + 20, resume_text)
+end
+
+-- ============================================================
+-- DRAW
+-- ============================================================
+
+local function draw()
+    canvas.clear()
+
+    -- Dark space background
+    canvas.set_color(10, 10, 30)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    -- Stars
+    for i, star in ipairs(stars) do
+        canvas.set_color(star.brightness, star.brightness, star.brightness)
+        canvas.fill_rect(star.x, star.y, star.size, star.size)
+    end
+
+    -- Title screen: just stars and the title, no ship or HUD
+    if state == "title" then
+        draw_title()
+        return
+    end
+
+    -- Lasers
+    for i, laser in ipairs(lasers) do
+        canvas.draw_image("laser", laser.x, laser.y, laser_w, laser_h)
+    end
+
+    -- Meteors
+    for i, meteor in ipairs(meteors) do
+        canvas.draw_image("meteor", meteor.x, meteor.y, meteor_w, meteor_h)
+    end
+
+    -- Ship
+    canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)
+
+    -- HUD
+    canvas.set_color(255, 255, 255)
+    canvas.set_font_size(16)
+    canvas.draw_text(10, 10, "Score: " .. score)
+    canvas.draw_text(10, 30, "Arrow keys: Move | SPACE: Shoot | P: Pause")
+
+    -- Paused overlay
+    if state == "paused" then
+        draw_paused()
+    end
+
+    -- Game over overlay
+    if state == "game_over" then
+        -- Dark overlay
+        canvas.set_color(0, 0, 0, 180)
+        canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+        -- "GAME OVER" text (red)
+        canvas.set_font_size(48)
+        canvas.set_color(255, 50, 50)
+        local title = "GAME OVER"
+        local title_w = canvas.get_text_width(title)
+        canvas.draw_text((SCREEN_W - title_w) / 2, SCREEN_H / 2 - 60, title)
+
+        -- Score text (white)
+        canvas.set_font_size(24)
+        canvas.set_color(255, 255, 255)
+        local score_text = "Score: " .. score
+        local score_w = canvas.get_text_width(score_text)
+        canvas.draw_text((SCREEN_W - score_w) / 2, SCREEN_H / 2, score_text)
+
+        -- Restart prompt (white)
+        local restart_text = "Press ENTER to continue"
+        local restart_w = canvas.get_text_width(restart_text)
+        canvas.draw_text((SCREEN_W - restart_w) / 2, SCREEN_H / 2 + 40, restart_text)
+    end
+end
+
+-- ============================================================
+-- GAME LOOP
+-- ============================================================
+
+local function game()
+    user_input()
+    update()
+    draw()
+end
+
+canvas.tick(game)
+canvas.start()</code></pre>
+            </div>
+        </div>
+    </div>
+
+</div>
+</main>
+
+<!-- Toast notification for blocked copy -->
+<div id="toast">Type it out! You'll remember it better.</div>
+
+<script>
+(function() {
+    'use strict';
+
+    // ============================================================
+    // HINT REVEAL
+    // ============================================================
+
+    document.querySelectorAll('.btn-hint').forEach(function(btn) {
+        var step = btn.closest('.step');
+        var hints = step.querySelectorAll('.hints-container .hint');
+        var total = parseInt(btn.getAttribute('data-total'), 10);
+        var revealed = 0;
+
+        btn.addEventListener('click', function() {
+            if (revealed < total) {
+                hints[revealed].removeAttribute('hidden');
+                hints[revealed].querySelectorAll('code.lua').forEach(highlightElement);
+                revealed++;
+
+                if (revealed < total) {
+                    btn.textContent = 'Show Hint (' + (revealed + 1) + '/' + total + ')';
+                } else {
+                    // All hints revealed — hide hint button, show solution button
+                    btn.setAttribute('hidden', '');
+                    var solBtn = step.querySelector('.btn-solution');
+                    if (solBtn) solBtn.removeAttribute('hidden');
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // SOLUTION REVEAL
+    // ============================================================
+
+    document.querySelectorAll('.btn-solution').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var step = btn.closest('.step');
+            var sol = step.querySelector('.solution');
+            if (sol) {
+                var isHidden = sol.hasAttribute('hidden');
+                if (isHidden) {
+                    sol.removeAttribute('hidden');
+                    btn.textContent = 'Hide Solution';
+                    // Re-highlight any code blocks that were hidden
+                    sol.querySelectorAll('code.lua').forEach(highlightElement);
+                } else {
+                    sol.setAttribute('hidden', '');
+                    btn.textContent = 'Show Solution';
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // STUCK CODE TOGGLE
+    // ============================================================
+
+    document.querySelectorAll('.btn-stuck').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var stuck = btn.closest('.stuck');
+            var codeDiv = stuck.querySelector('.stuck-code');
+            if (codeDiv) {
+                var isHidden = codeDiv.hasAttribute('hidden');
+                if (isHidden) {
+                    codeDiv.removeAttribute('hidden');
+                    codeDiv.querySelectorAll('code.lua').forEach(highlightElement);
+                } else {
+                    codeDiv.setAttribute('hidden', '');
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // LUA SYNTAX HIGHLIGHTING
+    // ============================================================
+
+    var LUA_KEYWORDS = ['local','function','end','if','then','else','elseif',
+        'for','do','while','return','break','and','or','not','in',
+        'true','false','nil','repeat','until'];
+    var kwSet = {};
+    LUA_KEYWORDS.forEach(function(k) { kwSet[k] = true; });
+
+    function escapeHTML(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function highlightLua(code) {
+        var result = '';
+        var i = 0;
+        var len = code.length;
+
+        while (i < len) {
+            // Comment
+            if (code[i] === '-' && i + 1 < len && code[i + 1] === '-') {
+                var end = code.indexOf('\n', i);
+                if (end === -1) end = len;
+                result += '<span class="cm">' + escapeHTML(code.substring(i, end)) + '</span>';
+                i = end;
+            }
+            // String (double quote)
+            else if (code[i] === '"') {
+                var j = i + 1;
+                while (j < len && code[j] !== '"' && code[j] !== '\n') {
+                    if (code[j] === '\\') j++;
+                    j++;
+                }
+                if (j < len && code[j] === '"') j++;
+                result += '<span class="str">' + escapeHTML(code.substring(i, j)) + '</span>';
+                i = j;
+            }
+            // String (single quote)
+            else if (code[i] === "'") {
+                var j = i + 1;
+                while (j < len && code[j] !== "'" && code[j] !== '\n') {
+                    if (code[j] === '\\') j++;
+                    j++;
+                }
+                if (j < len && code[j] === "'") j++;
+                result += '<span class="str">' + escapeHTML(code.substring(i, j)) + '</span>';
+                i = j;
+            }
+            // Number (not preceded by word char)
+            else if (/[0-9]/.test(code[i]) && (i === 0 || !/[a-zA-Z_]/.test(code[i - 1]))) {
+                var j = i;
+                while (j < len && /[0-9.]/.test(code[j])) j++;
+                result += '<span class="num">' + code.substring(i, j) + '</span>';
+                i = j;
+            }
+            // Identifier / keyword
+            else if (/[a-zA-Z_]/.test(code[i])) {
+                var j = i;
+                while (j < len && /[a-zA-Z0-9_]/.test(code[j])) j++;
+                var word = code.substring(i, j);
+                if (kwSet[word]) {
+                    result += '<span class="kw">' + word + '</span>';
+                } else {
+                    // Check for function call (skip whitespace, look for '(')
+                    var k = j;
+                    while (k < len && code[k] === ' ') k++;
+                    if (k < len && code[k] === '(') {
+                        result += '<span class="fn">' + word + '</span>';
+                    } else {
+                        result += word;
+                    }
+                }
+                i = j;
+            }
+            // Dot accessor — check if next word is a function call
+            else if (code[i] === '.' && i + 1 < len && /[a-zA-Z_]/.test(code[i + 1])) {
+                result += '.';
+                i++;
+            }
+            // Other character
+            else {
+                result += escapeHTML(code[i]);
+                i++;
+            }
+        }
+        return result;
+    }
+
+    function highlightElement(el) {
+        var raw = el.textContent;
+        el.innerHTML = highlightLua(raw);
+    }
+
+    // Highlight all visible code blocks on load
+    document.querySelectorAll('code.lua').forEach(function(el) {
+        // Only highlight if the element is not inside a hidden container
+        var parent = el.closest('[hidden]');
+        if (!parent) {
+            highlightElement(el);
+        }
+    });
+
+    // ============================================================
+    // ANTI-COPY-PASTE
+    // ============================================================
+
+    var toast = document.getElementById('toast');
+    var toastTimer = null;
+
+    function showToast() {
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(function() {
+            toast.classList.remove('show');
+        }, 2000);
+    }
+
+    // Block copy/cut on code blocks
+    document.querySelectorAll('pre.code-block').forEach(function(block) {
+        block.addEventListener('copy', function(e) {
+            e.preventDefault();
+            showToast();
+        });
+        block.addEventListener('cut', function(e) {
+            e.preventDefault();
+            showToast();
+        });
+    });
+
+    // Also block on the whole document for code elements
+    document.addEventListener('copy', function(e) {
+        var sel = window.getSelection();
+        if (sel && sel.anchorNode) {
+            var node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+            if (node && node.closest && node.closest('pre.code-block')) {
+                e.preventDefault();
+                showToast();
+            }
+        }
+    });
+
+})();
+</script>
+
+</body>
+</html>

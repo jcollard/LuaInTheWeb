@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bonus 5: Meteor Variety</title>
+<style>
+/* ============================================================
+   BASE / RESET
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: #0a0e27;
+    color: #e0e6ff;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ============================================================
+   HEADER + TABS
+   ============================================================ */
+header {
+    background: #101538;
+    border-bottom: 2px solid #1a2050;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-title {
+    text-align: center;
+    padding: 12px 16px 0;
+    font-size: 1.3em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #a0a8e0;
+}
+
+.tab-bar {
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px 0;
+    overflow-x: auto;
+}
+
+.tab-bar button {
+    background: transparent;
+    border: none;
+    color: #808cc0;
+    padding: 10px 18px;
+    font-size: 0.95em;
+    font-family: inherit;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-bar button:hover {
+    color: #b0b8f0;
+}
+
+.tab-bar button.active {
+    color: #e0e6ff;
+    border-bottom-color: #6c63ff;
+    font-weight: 600;
+}
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+main {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+.part { display: none; }
+.part.active { display: block; }
+
+.part > h1 {
+    font-size: 1.8em;
+    margin-bottom: 4px;
+    color: #fff;
+}
+
+.part > .subtitle {
+    font-size: 1.1em;
+    color: #8890c0;
+    margin-bottom: 28px;
+}
+
+/* ============================================================
+   CONCEPTS SECTION
+   ============================================================ */
+.concepts {
+    background: #121640;
+    border: 1px solid #1e2460;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+}
+
+.concepts h2 {
+    font-size: 1.15em;
+    color: #a0a8e0;
+    margin-bottom: 12px;
+}
+
+.concepts p, .concepts li {
+    margin-bottom: 8px;
+    color: #c0c8f0;
+}
+
+.concepts ul, .concepts ol {
+    padding-left: 24px;
+    margin-bottom: 8px;
+}
+
+.concepts strong { color: #e0e6ff; }
+
+.concepts .concept-code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: #0d1030;
+    color: #82aaff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.92em;
+}
+
+/* ============================================================
+   STEPS
+   ============================================================ */
+.step {
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    border-left: 4px solid;
+}
+
+.step-copy {
+    background: #0d1a2c;
+    border-left-color: #00bcd4;
+}
+
+.step-challenge {
+    background: #1a1510;
+    border-left-color: #ff9800;
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #e0e6ff;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.badge-copy {
+    background: #00bcd4;
+    color: #001820;
+}
+
+.badge-challenge {
+    background: #ff9800;
+    color: #1a0e00;
+}
+
+.step-location {
+    font-size: 0.9em;
+    color: #8890c0;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
+.step-desc, .step-task {
+    margin-bottom: 12px;
+    color: #c0c8f0;
+}
+
+.step-desc strong, .step-task strong { color: #e0e6ff; }
+
+.step-note {
+    background: #0a1028;
+    border-left: 3px solid #2196f3;
+    padding: 8px 14px;
+    margin-top: 10px;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.92em;
+    color: #90a0d0;
+}
+
+/* ============================================================
+   CODE BLOCKS
+   ============================================================ */
+pre.code-block {
+    background: #0d1030;
+    border: 1px solid #1a2050;
+    border-radius: 6px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    margin: 8px 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+pre.code-block code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.92em;
+    line-height: 1.55;
+    color: #eeffff;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Inline code in descriptions */
+.step-desc code, .step-task code, .step-note code,
+.concepts code, .hint code, p code, li code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: #0d1030;
+    color: #82aaff;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+/* ============================================================
+   SYNTAX HIGHLIGHTING
+   ============================================================ */
+.kw  { color: #c792ea; }   /* keywords */
+.str { color: #c3e88d; }   /* strings */
+.cm  { color: #809aa5; }   /* comments */
+.num { color: #f78c6c; }   /* numbers */
+.fn  { color: #82aaff; }   /* function calls */
+
+/* ============================================================
+   HINTS + SOLUTIONS
+   ============================================================ */
+.hints-container {
+    margin: 8px 0;
+}
+
+.hint {
+    background: #141028;
+    border: 1px solid #2a2060;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin: 8px 0;
+    color: #b0b8e0;
+    font-size: 0.95em;
+}
+
+.hint strong { color: #e0e6ff; }
+
+.solution {
+    margin: 8px 0;
+}
+
+.btn-hint, .btn-solution {
+    border: none;
+    padding: 8px 18px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 6px 6px 6px 0;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.btn-hint:active, .btn-solution:active {
+    transform: scale(0.97);
+}
+
+.btn-hint {
+    background: #6c63ff;
+    color: #fff;
+}
+
+.btn-hint:hover { background: #7d75ff; }
+
+.btn-solution {
+    background: #ff9800;
+    color: #1a0e00;
+}
+
+.btn-solution:hover { background: #ffad33; }
+
+/* ============================================================
+   CHECK YOUR WORK + STUCK
+   ============================================================ */
+.check-work {
+    background: #0d1830;
+    border: 1px solid #1a2850;
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin-top: 32px;
+}
+
+.check-work h2 {
+    font-size: 1.1em;
+    color: #4caf50;
+    margin-bottom: 10px;
+}
+
+.check-work ul {
+    padding-left: 24px;
+}
+
+.check-work li {
+    margin-bottom: 6px;
+    color: #b0c0d0;
+}
+
+.stuck {
+    margin-top: 16px;
+    padding: 12px 18px;
+    background: #10101a;
+    border-radius: 6px;
+    color: #7880a0;
+    font-size: 0.9em;
+}
+
+.stuck code {
+    color: #82aaff;
+}
+
+.btn-stuck {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+
+.btn-stuck:hover {
+    color: #a0a8d0;
+}
+
+.btn-stuck code {
+    color: #82aaff;
+}
+
+.stuck-code {
+    margin-top: 12px;
+    max-height: 600px;
+    overflow-y: auto;
+    border-radius: 6px;
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+#toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #ff9800;
+    color: #1a0e00;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95em;
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+    z-index: 200;
+    pointer-events: none;
+}
+
+#toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+/* ============================================================
+   SEPARATOR
+   ============================================================ */
+.sep {
+    border: none;
+    border-top: 1px solid #1a2050;
+    margin: 24px 0;
+}
+
+/* ============================================================
+   DELETE INSTRUCTION
+   ============================================================ */
+.delete-block {
+    background: #1a0d0d;
+    border: 1px solid #3a1515;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 8px 0;
+}
+
+.delete-block .delete-label {
+    color: #e05050;
+    font-weight: 700;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+
+.delete-block pre.code-block {
+    border-color: #3a1515;
+    opacity: 0.7;
+}
+
+/* ============================================================
+   BONUS PAGES
+   ============================================================ */
+.tier {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+.tier-1 { background: #2e7d32; color: #e8ffe8; }
+.tier-2 { background: #1565c0; color: #e8f0ff; }
+.tier-3 { background: #8e24aa; color: #fbe8ff; }
+
+.before-start {
+    background: #10182e;
+    border: 1px solid #24305a;
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    color: #b0b8e0;
+    font-size: 0.95em;
+}
+.before-start strong { color: #e0e6ff; }
+.before-start ul { padding-left: 22px; margin-top: 6px; }
+.before-start li { margin-bottom: 4px; }
+
+.stretch {
+    background: #1a1028;
+    border: 1px solid #3a2060;
+    border-radius: 8px;
+    padding: 16px 22px;
+    margin-top: 24px;
+}
+.stretch h2 { font-size: 1.05em; color: #ce93d8; margin-bottom: 8px; }
+.stretch ul { padding-left: 24px; }
+.stretch li { margin-bottom: 6px; color: #c0b0d8; }
+
+.reference h2 { font-size: 1.1em; color: #a0a8e0; margin-bottom: 10px; }
+.reference {
+    margin-top: 32px;
+    padding: 18px 24px;
+    background: #10101a;
+    border-radius: 8px;
+}
+.warning {
+    background: #2a1a08;
+    border-left: 4px solid #ff9800;
+    padding: 10px 16px;
+    border-radius: 0 6px 6px 0;
+    color: #ffcc80;
+    margin-bottom: 12px;
+    font-size: 0.95em;
+}
+.warning strong { color: #ffe0b2; }
+
+.challenge-list { list-style: none; padding: 0; }
+.challenge-list li {
+    background: #121640;
+    border: 1px solid #1e2460;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin-bottom: 10px;
+}
+.challenge-list .file { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; color: #82aaff; font-size: 0.9em; }
+.challenge-list .title { font-weight: 700; color: #fff; }
+.challenge-list .summary { color: #a0a8d0; font-size: 0.95em; margin-top: 4px; }
+.challenge-list .req { color: #8088b8; font-size: 0.85em; margin-top: 4px; font-style: italic; }
+.tier-heading { margin: 28px 0 12px; font-size: 1.25em; color: #e0e6ff; }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">SPACE SHOOTER &mdash; BONUS CHALLENGES</div>
+    <div style="height: 10px"></div>
+</header>
+
+<main>
+<div class="part active">
+    <h1><span class="tier tier-2">★★ ENTITIES</span>Bonus 5: Meteor Variety</h1>
+    <p class="subtitle">Small fast rocks, big slow boulders: every meteor gets its own size, speed, image and spin.</p>
+
+    <div class="before-start">
+        <strong>Before you start</strong>
+        <ul>
+            <li><strong>Prerequisites:</strong> None &mdash; start from your finished Part 7 game.</li>
+            <li><strong>New files for this challenge:</strong> <code>images/meteor_small.png</code>, <code>images/meteor_med.png</code></li>
+            <li>Make a backup copy of your <code>game.lua</code> first, so you can always go back.</li>
+            <li>Bonus challenges give you less help than the main guide. Work out <em>where</em> each piece of code goes, and use the hints if you get stuck.</li>
+        </ul>
+    </div>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><strong>Per-object data</strong> &mdash; right now every meteor shares <code>meteor_w</code>, <code>meteor_h</code> and <code>meteor_speed</code>. To make meteors different, each meteor table needs its own <code>meteor.w</code>, <code>meteor.h</code> and <code>meteor.speed</code>.</li>
+            <li><strong>Refactoring</strong> &mdash; changing <em>how</em> your code stores things without changing what the game does. When you move data, you must update <strong>every</strong> place that used the old names.</li>
+            <li><strong>Picking from a list</strong> &mdash; <code>kinds[math.random(#kinds)]</code> picks one random entry from a list.</li>
+            <li><code>math.random()</code> with <strong>no arguments</strong> gives a decimal between <code>0</code> and <code>1</code> (like <code>0.73</code>). Multiply and subtract to get any range you want.</li>
+            <li><strong>Transforms</strong> &mdash; <code>canvas.save()</code>, <code>canvas.translate(x, y)</code>, <code>canvas.rotate(radians)</code> and <code>canvas.restore()</code> let you move and turn everything you draw.</li>
+        </ul>
+    </div>
+
+    <!-- Task 1 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Make a list of meteor kinds</div>
+        <div class="step-task">Load the two new images: <code>meteor_small.png</code> as <code>"meteor_small"</code> and <code>meteor_med.png</code> as <code>"meteor_med"</code>. Then, in the Meteors part of GAME STATE, make a list called <code>meteor_kinds</code> with three tables. Each table has an <code>image</code>, a <code>w</code>, an <code>h</code> and a <code>speed</code>:
+            <ul>
+                <li>small: <code>"meteor_small"</code>, 28 by 28, speed 220</li>
+                <li>medium: <code>"meteor_med"</code>, 43 by 43, speed 170</li>
+                <li>big: <code>"meteor"</code>, 60 by 50, speed 110</li>
+            </ul>
+        </div>
+        <div class="step-note">Small meteors are fast and hard to hit. Big ones are slow but hard to dodge. That mix is what makes it fun.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Loading images works just like the ship, laser and meteor lines you already have.</div>
+            <div class="hint" hidden>A list of tables looks like <code>local meteor_kinds = { {...}, {...}, {...} }</code>. Each inner table is written like <code>{ image = "meteor_small", w = 28, h = 28, speed = 220 }</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- Meteor kinds: each new meteor picks one of these at random
+local meteor_kinds = {
+    { image = "meteor_small", w = 28, h = 28, speed = 220 },
+    { image = "meteor_med",   w = 43, h = 43, speed = 170 },
+    { image = "meteor",       w = 60, h = 50, speed = 110 }
+}
+
+-- With the other load_image lines
+canvas.assets.load_image("meteor_small", "meteor_small.png")
+canvas.assets.load_image("meteor_med", "meteor_med.png")</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 2 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Each meteor picks a kind</div>
+        <div class="step-task">Change <code>spawn_meteor()</code> so it picks a random kind from <code>meteor_kinds</code>, then copies that kind's <code>w</code>, <code>h</code>, <code>speed</code> and <code>image</code> into the new meteor table. Use the kind's width and height (not <code>meteor_w</code> and <code>meteor_h</code>) for the starting <code>x</code> and <code>y</code> too.</div>
+        <div class="hints-container">
+            <div class="hint" hidden><code>#meteor_kinds</code> is 3. <code>math.random(3)</code> gives 1, 2 or 3. Use that as the index into the list.</div>
+            <div class="hint" hidden>Start with <code>local kind = meteor_kinds[math.random(#meteor_kinds)]</code>. Then inside the meteor table write <code>w = kind.w,</code> and so on for each field.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">local function spawn_meteor()
+    local kind = meteor_kinds[math.random(#meteor_kinds)]
+    local meteor = {
+        x = math.random(0, SCREEN_W - kind.w),
+        y = -kind.h,
+        w = kind.w,
+        h = kind.h,
+        speed = kind.speed,
+        image = kind.image
+    }
+    table.insert(meteors, meteor)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 3 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Replace the old shared variables</div>
+        <div class="step-task">Delete the <code>meteor_w</code>, <code>meteor_h</code> and <code>meteor_speed</code> lines from GAME STATE. Then fix every place that used them so it uses the meteor's own fields instead: moving meteors, both collision checks, and drawing (draw <code>meteor.image</code> at the meteor's own size).</div>
+        <div class="step-note">Deleting the old variables first is a useful trick. If you miss a spot, the old name is now <code>nil</code>, so the game usually stops with an error like <code>attempt to perform arithmetic on a nil value (global 'meteor_speed')</code>. Read the line number in the error and look there. You can also search your file for <code>meteor_w</code>, <code>meteor_h</code> and <code>meteor_speed</code> to find any leftovers.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>There are four places to fix: the meteor movement loop, the laser-vs-meteor check, the ship-vs-meteor check, and the meteor drawing loop.</div>
+            <div class="hint" hidden>In the loops that use <code>meteors[i]</code> or <code>meteors[j]</code>, the width is <code>meteors[j].w</code>. In the <code>ipairs</code> loops that have a <code>meteor</code> variable, it's <code>meteor.w</code>.</div>
+            <div class="hint" hidden>Movement becomes <code>meteors[i].y = meteors[i].y + meteors[i].speed * dt</code>. Drawing becomes <code>canvas.draw_image(meteor.image, meteor.x, meteor.y, meteor.w, meteor.h)</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- Move meteors (in update)
+meteors[i].y = meteors[i].y + meteors[i].speed * dt
+
+-- Laser vs meteor collision
+if check_collision(lasers[i].x, lasers[i].y, laser_w, laser_h,
+                   meteors[j].x, meteors[j].y, meteors[j].w, meteors[j].h) then
+
+-- Ship vs meteor collision
+if check_collision(ship_x, ship_y, ship_w, ship_h,
+                   meteor.x, meteor.y, meteor.w, meteor.h) then
+
+-- Draw meteors (you'll replace this in Step 5)
+canvas.draw_image(meteor.image, meteor.x, meteor.y, meteor.w, meteor.h)</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 4 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Give each meteor a spin</div>
+        <div class="step-task">Add two more fields to each new meteor: <code>angle</code> (starts at <code>0</code>) and <code>spin</code>, a random number between <code>-2</code> and <code>2</code>. Then, in the meteor movement loop, add <code>spin * dt</code> to the meteor's angle every frame.</div>
+        <div class="step-note">Angles here are in <strong>radians</strong>. A full turn is about <code>6.28</code> radians, so a spin of <code>2</code> is roughly one turn every three seconds. A negative spin turns the other way.</div>
+        <div class="hints-container">
+            <div class="hint" hidden><code>math.random()</code> gives 0 to 1. <code>math.random() * 4</code> gives 0 to 4. What do you subtract to get -2 to 2?</div>
+            <div class="hint" hidden>In <code>spawn_meteor()</code> add <code>angle = 0,</code> and <code>spin = math.random() * 4 - 2</code>. In <code>update()</code>, the angle grows just like <code>y</code> does: <code>meteors[i].angle = meteors[i].angle + meteors[i].spin * dt</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- In spawn_meteor(), add to the meteor table
+image = kind.image,
+angle = 0,
+spin = math.random() * 4 - 2
+
+-- In update(), in the meteor movement loop
+meteors[i].angle = meteors[i].angle + meteors[i].spin * dt</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 5 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 5: Draw spinning meteors</div>
+        <div class="step-location">Where: DRAW section, replace the whole meteor drawing loop</div>
+        <pre class="code-block"><code class="lua">-- Meteors (spinning around their centers)
+for i, meteor in ipairs(meteors) do
+    canvas.save()
+    canvas.translate(meteor.x + meteor.w / 2, meteor.y + meteor.h / 2)
+    canvas.rotate(meteor.angle)
+    canvas.draw_image(meteor.image, -meteor.w / 2, -meteor.h / 2, meteor.w, meteor.h)
+    canvas.restore()
+end</code></pre>
+        <div class="step-desc"><code>canvas.rotate()</code> always turns around the point <code>(0, 0)</code>. Normally that's the top-left corner of the screen, so rotating there would swing the meteor in a big circle across the screen! Instead, <code>translate</code> first moves <code>(0, 0)</code> to the <strong>center of the meteor</strong>. Then <code>rotate</code> turns around that center. Finally we draw the image half its width to the left and half its height up (<code>-meteor.w / 2</code>, <code>-meteor.h / 2</code>), so the image sits centered on the new <code>(0, 0)</code>. <code>canvas.save()</code> remembers the normal canvas and <code>canvas.restore()</code> puts it back, so the next meteor, the ship and the HUD aren't moved or turned. Every <code>save</code> needs a matching <code>restore</code>.</div>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>Three kinds of meteors: small, medium and big</li>
+            <li>Small meteors fall fast, big ones fall slowly</li>
+            <li>Every meteor spins, some clockwise and some counter-clockwise, at different speeds</li>
+            <li>Meteors spin in place around their centers (they don't swing around the screen)</li>
+            <li>Lasers hit, and the ship crashes into, each meteor at its own size</li>
+        </ul>
+        <p>Collisions still use rectangles that don't spin, so the very corner of a meteor's box can count as a hit. That's fine for a fast game like this one.</p>
+    </div>
+
+    <div class="stretch">
+        <h2>Going Further</h2>
+        <ul>
+            <li>Give each kind a <code>points</code> value. Small meteors are hard to hit, so maybe they're worth 3.</li>
+            <li>Add a little random speed to every meteor, like <code>kind.speed + math.random(-30, 30)</code>.</li>
+            <li>Put the small kind in <code>meteor_kinds</code> twice. What happens to how often small meteors show up? Why?</li>
+        </ul>
+    </div>
+
+    <div class="reference">
+        <h2>Reference Solution</h2>
+        <div class="warning"><strong>Read this first:</strong> this is one complete version of <code>game.lua</code> with this challenge finished, built from the Part 7 code. Your game is probably different &mdash; you may have changed numbers, names, or added other bonus features &mdash; so copying it over your file will likely <strong>not</strong> work and could erase your own work. Use it to compare ideas, then make the changes in <em>your</em> version.</div>
+        <div class="stuck">
+            <button class="btn-stuck">Show / hide the complete reference <code>game.lua</code></button>
+            <div class="stuck-code" hidden>
+                <pre class="code-block"><code class="lua">-- ============================================================
+-- Space Shooter — Bonus 5: Meteor Variety
+-- Every meteor has its own size, speed, image and spin!
+-- ============================================================
+
+local canvas = require("canvas")
+canvas.assets.add_path("images")
+canvas.set_size(800, 600)
+
+local SCREEN_W = 800
+local SCREEN_H = 600
+
+-- ============================================================
+-- GAME STATE
+-- ============================================================
+
+-- Ship
+local ship_x = 370
+local ship_y = 500
+local ship_w = 60
+local ship_h = 48
+local ship_speed = 300
+
+-- Lasers
+local lasers = {}
+local laser_w = 9
+local laser_h = 30
+local laser_speed = 500
+
+-- Meteors
+local meteors = {}
+
+-- Meteor kinds: each new meteor picks one of these at random
+local meteor_kinds = {
+    { image = "meteor_small", w = 28, h = 28, speed = 220 },
+    { image = "meteor_med",   w = 43, h = 43, speed = 170 },
+    { image = "meteor",       w = 60, h = 50, speed = 110 }
+}
+
+-- Spawn timer
+local spawn_timer = 0
+local spawn_interval = 2.0
+
+-- Score
+local score = 0
+
+-- Game over
+local game_over = false
+
+-- Stars
+local stars = {}
+local STAR_COUNT = 60
+
+-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")
+canvas.assets.load_image("laser", "laser.png")
+canvas.assets.load_image("meteor", "meteor.png")
+canvas.assets.load_image("meteor_small", "meteor_small.png")
+canvas.assets.load_image("meteor_med", "meteor_med.png")
+
+-- ============================================================
+-- GENERATE STAR
+-- ============================================================
+
+local function generate_star()
+    local size = math.random(1, 3)
+    local speed = size * 30
+    local brightness = size * 60 + 40
+    return {
+        x = math.random(0, SCREEN_W),
+        y = math.random(0, SCREEN_H),
+        size = size,
+        speed = speed,
+        brightness = brightness
+    }
+end
+
+-- ============================================================
+-- INIT STARS
+-- ============================================================
+
+local function init_stars()
+    stars = {}
+    for i = 1, STAR_COUNT do
+        table.insert(stars, generate_star())
+    end
+end
+
+init_stars()
+
+-- ============================================================
+-- COLLISION DETECTION
+-- ============================================================
+
+local function check_collision(a_x, a_y, a_w, a_h, b_x, b_y, b_w, b_h)
+    return a_x &lt; b_x + b_w
+       and a_x + a_w &gt; b_x
+       and a_y &lt; b_y + b_h
+       and a_y + a_h &gt; b_y
+end
+
+-- ============================================================
+-- SPAWN METEOR
+-- ============================================================
+
+local function spawn_meteor()
+    local kind = meteor_kinds[math.random(#meteor_kinds)]
+    local meteor = {
+        x = math.random(0, SCREEN_W - kind.w),
+        y = -kind.h,
+        w = kind.w,
+        h = kind.h,
+        speed = kind.speed,
+        image = kind.image,
+        angle = 0,
+        spin = math.random() * 4 - 2
+    }
+    table.insert(meteors, meteor)
+end
+
+-- ============================================================
+-- SPAWN LASER
+-- ============================================================
+
+local function spawn_laser(x, y)
+    local laser = {
+        x = x,
+        y = y
+    }
+    table.insert(lasers, laser)
+end
+
+-- ============================================================
+-- RESET GAME
+-- ============================================================
+
+local function reset_game()
+    ship_x = 370
+    ship_y = 500
+    lasers = {}
+    meteors = {}
+    spawn_timer = 0
+    score = 0
+    game_over = false
+    init_stars()
+end
+
+-- ============================================================
+-- USER INPUT
+-- ============================================================
+
+local function user_input()
+    local dt = canvas.get_delta()
+
+    -- Restart on ENTER when game is over
+    if game_over then
+        if canvas.is_key_pressed(canvas.keys.ENTER) then
+            reset_game()
+        end
+        return
+    end
+
+    -- Ship movement
+    if canvas.is_key_down(canvas.keys.LEFT) then ship_x = ship_x - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.RIGHT) then ship_x = ship_x + ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.UP) then ship_y = ship_y - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.DOWN) then ship_y = ship_y + ship_speed * dt end
+
+    -- Fire laser
+    if canvas.is_key_pressed(canvas.keys.SPACE) then
+        spawn_laser(ship_x + ship_w / 2 - laser_w / 2, ship_y)
+    end
+end
+
+-- ============================================================
+-- UPDATE
+-- ============================================================
+
+local function update()
+    if game_over then return end
+
+    local dt = canvas.get_delta()
+
+    -- Clamp ship to screen
+    ship_x = math.max(0, math.min(SCREEN_W - ship_w, ship_x))
+    ship_y = math.max(0, math.min(SCREEN_H - ship_h, ship_y))
+
+    -- Move lasers and remove off-screen ones
+    for i = #lasers, 1, -1 do
+        lasers[i].y = lasers[i].y - laser_speed * dt
+        if lasers[i].y + laser_h &lt; 0 then
+            table.remove(lasers, i)
+        end
+    end
+
+    -- Spawn timer
+    spawn_timer = spawn_timer + dt
+    if spawn_timer &gt;= spawn_interval then
+        spawn_meteor()
+        spawn_timer = 0
+    end
+
+    -- Move and spin meteors, and remove off-screen ones
+    for i = #meteors, 1, -1 do
+        meteors[i].y = meteors[i].y + meteors[i].speed * dt
+        meteors[i].angle = meteors[i].angle + meteors[i].spin * dt
+        if meteors[i].y &gt; SCREEN_H then
+            table.remove(meteors, i)
+        end
+    end
+
+    -- Laser vs meteor collision
+    for i = #lasers, 1, -1 do
+        for j = #meteors, 1, -1 do
+            if check_collision(lasers[i].x, lasers[i].y, laser_w, laser_h,
+                               meteors[j].x, meteors[j].y, meteors[j].w, meteors[j].h) then
+                table.remove(meteors, j)
+                table.remove(lasers, i)
+                score = score + 1
+                break
+            end
+        end
+    end
+
+    -- Ship vs meteor collision
+    for i, meteor in ipairs(meteors) do
+        if check_collision(ship_x, ship_y, ship_w, ship_h,
+                           meteor.x, meteor.y, meteor.w, meteor.h) then
+            game_over = true
+            return
+        end
+    end
+
+    -- Move stars
+    for i, star in ipairs(stars) do
+        star.y = star.y + star.speed * dt
+        if star.y &gt; SCREEN_H then
+            star.x = math.random(0, SCREEN_W)
+            star.y = -star.size
+        end
+    end
+end
+
+-- ============================================================
+-- DRAW
+-- ============================================================
+
+local function draw()
+    canvas.clear()
+
+    -- Dark space background
+    canvas.set_color(10, 10, 30)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    -- Stars
+    for i, star in ipairs(stars) do
+        canvas.set_color(star.brightness, star.brightness, star.brightness)
+        canvas.fill_rect(star.x, star.y, star.size, star.size)
+    end
+
+    -- Lasers
+    for i, laser in ipairs(lasers) do
+        canvas.draw_image("laser", laser.x, laser.y, laser_w, laser_h)
+    end
+
+    -- Meteors (spinning around their centers)
+    for i, meteor in ipairs(meteors) do
+        canvas.save()
+        canvas.translate(meteor.x + meteor.w / 2, meteor.y + meteor.h / 2)
+        canvas.rotate(meteor.angle)
+        canvas.draw_image(meteor.image, -meteor.w / 2, -meteor.h / 2, meteor.w, meteor.h)
+        canvas.restore()
+    end
+
+    -- Ship
+    canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)
+
+    -- HUD
+    canvas.set_color(255, 255, 255)
+    canvas.set_font_size(16)
+    canvas.draw_text(10, 10, "Score: " .. score)
+    canvas.draw_text(10, 30, "Arrow keys: Move | SPACE: Shoot")
+
+    -- Game over overlay
+    if game_over then
+        -- Dark overlay
+        canvas.set_color(0, 0, 0, 180)
+        canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+        -- "GAME OVER" text (red)
+        canvas.set_font_size(48)
+        canvas.set_color(255, 50, 50)
+        local title = "GAME OVER"
+        local title_w = canvas.get_text_width(title)
+        canvas.draw_text((SCREEN_W - title_w) / 2, SCREEN_H / 2 - 60, title)
+
+        -- Score text (white)
+        canvas.set_font_size(24)
+        canvas.set_color(255, 255, 255)
+        local score_text = "Score: " .. score
+        local score_w = canvas.get_text_width(score_text)
+        canvas.draw_text((SCREEN_W - score_w) / 2, SCREEN_H / 2, score_text)
+
+        -- Restart prompt (white)
+        local restart_text = "Press ENTER to restart"
+        local restart_w = canvas.get_text_width(restart_text)
+        canvas.draw_text((SCREEN_W - restart_w) / 2, SCREEN_H / 2 + 40, restart_text)
+    end
+end
+
+-- ============================================================
+-- GAME LOOP
+-- ============================================================
+
+local function game()
+    user_input()
+    update()
+    draw()
+end
+
+canvas.tick(game)
+canvas.start()</code></pre>
+            </div>
+        </div>
+    </div>
+
+</div>
+</main>
+
+<!-- Toast notification for blocked copy -->
+<div id="toast">Type it out! You'll remember it better.</div>
+
+<script>
+(function() {
+    'use strict';
+
+    // ============================================================
+    // HINT REVEAL
+    // ============================================================
+
+    document.querySelectorAll('.btn-hint').forEach(function(btn) {
+        var step = btn.closest('.step');
+        var hints = step.querySelectorAll('.hints-container .hint');
+        var total = parseInt(btn.getAttribute('data-total'), 10);
+        var revealed = 0;
+
+        btn.addEventListener('click', function() {
+            if (revealed < total) {
+                hints[revealed].removeAttribute('hidden');
+                hints[revealed].querySelectorAll('code.lua').forEach(highlightElement);
+                revealed++;
+
+                if (revealed < total) {
+                    btn.textContent = 'Show Hint (' + (revealed + 1) + '/' + total + ')';
+                } else {
+                    // All hints revealed — hide hint button, show solution button
+                    btn.setAttribute('hidden', '');
+                    var solBtn = step.querySelector('.btn-solution');
+                    if (solBtn) solBtn.removeAttribute('hidden');
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // SOLUTION REVEAL
+    // ============================================================
+
+    document.querySelectorAll('.btn-solution').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var step = btn.closest('.step');
+            var sol = step.querySelector('.solution');
+            if (sol) {
+                var isHidden = sol.hasAttribute('hidden');
+                if (isHidden) {
+                    sol.removeAttribute('hidden');
+                    btn.textContent = 'Hide Solution';
+                    // Re-highlight any code blocks that were hidden
+                    sol.querySelectorAll('code.lua').forEach(highlightElement);
+                } else {
+                    sol.setAttribute('hidden', '');
+                    btn.textContent = 'Show Solution';
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // STUCK CODE TOGGLE
+    // ============================================================
+
+    document.querySelectorAll('.btn-stuck').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var stuck = btn.closest('.stuck');
+            var codeDiv = stuck.querySelector('.stuck-code');
+            if (codeDiv) {
+                var isHidden = codeDiv.hasAttribute('hidden');
+                if (isHidden) {
+                    codeDiv.removeAttribute('hidden');
+                    codeDiv.querySelectorAll('code.lua').forEach(highlightElement);
+                } else {
+                    codeDiv.setAttribute('hidden', '');
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // LUA SYNTAX HIGHLIGHTING
+    // ============================================================
+
+    var LUA_KEYWORDS = ['local','function','end','if','then','else','elseif',
+        'for','do','while','return','break','and','or','not','in',
+        'true','false','nil','repeat','until'];
+    var kwSet = {};
+    LUA_KEYWORDS.forEach(function(k) { kwSet[k] = true; });
+
+    function escapeHTML(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function highlightLua(code) {
+        var result = '';
+        var i = 0;
+        var len = code.length;
+
+        while (i < len) {
+            // Comment
+            if (code[i] === '-' && i + 1 < len && code[i + 1] === '-') {
+                var end = code.indexOf('\n', i);
+                if (end === -1) end = len;
+                result += '<span class="cm">' + escapeHTML(code.substring(i, end)) + '</span>';
+                i = end;
+            }
+            // String (double quote)
+            else if (code[i] === '"') {
+                var j = i + 1;
+                while (j < len && code[j] !== '"' && code[j] !== '\n') {
+                    if (code[j] === '\\') j++;
+                    j++;
+                }
+                if (j < len && code[j] === '"') j++;
+                result += '<span class="str">' + escapeHTML(code.substring(i, j)) + '</span>';
+                i = j;
+            }
+            // String (single quote)
+            else if (code[i] === "'") {
+                var j = i + 1;
+                while (j < len && code[j] !== "'" && code[j] !== '\n') {
+                    if (code[j] === '\\') j++;
+                    j++;
+                }
+                if (j < len && code[j] === "'") j++;
+                result += '<span class="str">' + escapeHTML(code.substring(i, j)) + '</span>';
+                i = j;
+            }
+            // Number (not preceded by word char)
+            else if (/[0-9]/.test(code[i]) && (i === 0 || !/[a-zA-Z_]/.test(code[i - 1]))) {
+                var j = i;
+                while (j < len && /[0-9.]/.test(code[j])) j++;
+                result += '<span class="num">' + code.substring(i, j) + '</span>';
+                i = j;
+            }
+            // Identifier / keyword
+            else if (/[a-zA-Z_]/.test(code[i])) {
+                var j = i;
+                while (j < len && /[a-zA-Z0-9_]/.test(code[j])) j++;
+                var word = code.substring(i, j);
+                if (kwSet[word]) {
+                    result += '<span class="kw">' + word + '</span>';
+                } else {
+                    // Check for function call (skip whitespace, look for '(')
+                    var k = j;
+                    while (k < len && code[k] === ' ') k++;
+                    if (k < len && code[k] === '(') {
+                        result += '<span class="fn">' + word + '</span>';
+                    } else {
+                        result += word;
+                    }
+                }
+                i = j;
+            }
+            // Dot accessor — check if next word is a function call
+            else if (code[i] === '.' && i + 1 < len && /[a-zA-Z_]/.test(code[i + 1])) {
+                result += '.';
+                i++;
+            }
+            // Other character
+            else {
+                result += escapeHTML(code[i]);
+                i++;
+            }
+        }
+        return result;
+    }
+
+    function highlightElement(el) {
+        var raw = el.textContent;
+        el.innerHTML = highlightLua(raw);
+    }
+
+    // Highlight all visible code blocks on load
+    document.querySelectorAll('code.lua').forEach(function(el) {
+        // Only highlight if the element is not inside a hidden container
+        var parent = el.closest('[hidden]');
+        if (!parent) {
+            highlightElement(el);
+        }
+    });
+
+    // ============================================================
+    // ANTI-COPY-PASTE
+    // ============================================================
+
+    var toast = document.getElementById('toast');
+    var toastTimer = null;
+
+    function showToast() {
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(function() {
+            toast.classList.remove('show');
+        }, 2000);
+    }
+
+    // Block copy/cut on code blocks
+    document.querySelectorAll('pre.code-block').forEach(function(block) {
+        block.addEventListener('copy', function(e) {
+            e.preventDefault();
+            showToast();
+        });
+        block.addEventListener('cut', function(e) {
+            e.preventDefault();
+            showToast();
+        });
+    });
+
+    // Also block on the whole document for code elements
+    document.addEventListener('copy', function(e) {
+        var sel = window.getSelection();
+        if (sel && sel.anchorNode) {
+            var node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+            if (node && node.closest && node.closest('pre.code-block')) {
+                e.preventDefault();
+                showToast();
+            }
+        }
+    });
+
+})();
+</script>
+
+</body>
+</html>
