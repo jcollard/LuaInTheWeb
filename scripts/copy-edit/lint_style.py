@@ -3,11 +3,12 @@
 
 Usage:
   lint_style.py guide.html [--part N]   report style issues (exit 1 if any)
-  lint_style.py --code-hash guide.html  fingerprint every <code> span in the file
+  lint_style.py --code-hash guide.html  fingerprint the <pre> code blocks in the file
 
 Line numbers refer to the extracted text (print it with guide_text.py), not the HTML.
 """
 import hashlib
+import html
 import re
 import sys
 from pathlib import Path
@@ -129,14 +130,22 @@ def lint(path, part=None):
 
 
 def code_hash(path):
-    spans = code_spans(path)
-    overall = hashlib.sha256("\n\0\n".join(spans).encode()).hexdigest()[:16]
-    blocks = [s for s in spans if "\n" in s]
-    print(f"code spans: {len(spans)} ({len(blocks)} multi-line)  overall: {overall}")
+    """Fingerprint the <pre> code blocks. Copy-editing must leave them identical.
+    Inline <code> spans are only counted: edits may add some (naming a variable
+    in task text), so compare the inline list by eye if the count drops."""
+    blocks = code_blocks_of(path)
+    inline = len(code_spans(path)) - len(blocks)
+    overall = hashlib.sha256("\n\0\n".join(blocks).encode()).hexdigest()[:16]
+    print(f"code blocks: {len(blocks)}  overall: {overall}  (inline code spans: {inline})")
     for i, b in enumerate(blocks, 1):
-        first = b.strip().splitlines()[0][:50] if b.strip() else "(empty)"
+        first = html.unescape(re.sub(r"<[^>]+>", "", b)).strip().splitlines()
+        first = first[0][:50] if first else "(empty)"
         print(f"  {i:>2} {hashlib.sha256(b.encode()).hexdigest()[:12]}  {first}")
     return 0
+
+
+def code_blocks_of(path):
+    return re.findall(r"<pre[^>]*>(.*?)</pre>", Path(path).read_text(encoding="utf-8"), re.S)
 
 
 if __name__ == "__main__":

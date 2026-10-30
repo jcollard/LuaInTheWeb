@@ -90,4 +90,5 @@ alone at home with nobody to ask.
   `solution.lua` for a bonus challenge).
 - Use names a kid would choose and understand (`ship_speed`, `invincible_timer`).
 - Comments in student code are short and only explain the why.
-- Copy-editing never changes code. `/copy-edit` checks this with a fingerprint of every `<code>` span.
+- Copy-editing never changes code blocks. `/copy-edit` checks this with a fingerprint of every `<pre>`
+  block. It may add inline `<code>` to prose, for example to name a variable in task text.

@@ -51,8 +51,10 @@ to repeat them. Use judgement: "just like the meteor timer" (meaning "the same w
 python3 scripts/copy-edit/lint_style.py --code-hash <file>
 ```
 
-This hashes every `<code>` span in the whole file (blocks and inline). Save the output. Copy-editing
-must never change code, and you'll check it again at the end.
+This hashes every `<pre>` code block in the whole file. Save the output. Copy-editing must never
+change code blocks, and you'll check it again at the end. Inline `<code>` spans are only counted:
+an edit may add one (for example to name a variable in task text), but must not change or drop an
+existing one by accident.
 
 ## 3. Run the readers
 
@@ -95,12 +97,35 @@ Read every reader's findings, then:
 Show the user a short list grouped by priority. For each item, show before → after and which readers
 flagged it. Ask them to choose apply all, pick some, or skip.
 
-Apply the approved edits to the HTML (or `content.html`/`meta.json`). Quotes use `backticks` where the
-HTML has `<code>`, and `&mdash;` appears as "—". Keep the HTML structure and classes unchanged.
+Write the edits as a proposals file, `reports/copy-edit/<guide>/<timestamp>/proposals.json`, so they
+can be checked and applied mechanically:
+
+```json
+{"target": "lua-learning-website/public/projects/space_game_project/guide.html",
+ "edits": [{"id": 1, "priority": "high", "readers": ["kid-reader", "lint"],
+            "before": "exact raw HTML, unique in the file", "after": "replacement HTML",
+            "why": "short reason"}]}
+```
+
+For a bonus challenge use `"bonus": "NN_slug"` instead of `"target"`, and `"file": "meta.json"` on
+edits to the title or subtitle. `before`/`after` are raw HTML: readers quote `backticks` where the HTML
+has `<code>`, and "—" where it has `&mdash;`. Put variable and function names in `<code>`. Keep the
+HTML structure and classes unchanged.
+
+Check the proposals before showing them, then apply the approved ones:
+
+```bash
+python3 scripts/copy-edit/apply_edits.py <proposals.json>                     # check only
+python3 scripts/copy-edit/apply_edits.py <proposals.json> --apply [--ids 1,4,7]
+```
+
+It refuses to apply if a `before` isn't found exactly once, edits overlap, a code block changes, or a
+JSON file breaks. It warns if an inline code span disappears.
 
 ## 6. Verify
 
-- Run `--code-hash` again. It must match step 2. If it doesn't, find and undo the code change.
+- Run `--code-hash` again. The code blocks must match step 2. If they don't, find and undo the code
+  change. If the inline count went down, check which span went missing.
 - Run the local style check again. It should be clean, or close to it.
 - For a bonus challenge, rebuild and check the pages:
   ```bash
