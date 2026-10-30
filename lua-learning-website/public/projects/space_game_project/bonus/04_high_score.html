@@ -525,10 +525,10 @@ pre.code-block code {
     <div class="concepts">
         <h2>New Concepts</h2>
         <ul>
-            <li><strong>Values that survive a reset</strong> &mdash; <code>reset_game()</code> puts everything back to the start. The high score is special: it must <em>not</em> be reset, or it would be forgotten every time you press ENTER.</li>
-            <li><strong>Flags</strong> &mdash; a <code>true</code>/<code>false</code> variable that remembers something happened, like &ldquo;this game beat the high score.&rdquo;</li>
-            <li><code>require("localstorage")</code> &mdash; saves small pieces of data in your browser, so they're still there after you close the page.</li>
-            <li><strong>Saved values are strings</strong> &mdash; if you save the number <code>42</code>, you get back the string <code>"42"</code>. <code>tonumber("42")</code> turns it back into a number. If nothing was saved yet, you get <code>nil</code>, and <code>tonumber(nil) or 0</code> gives <code>0</code>.</li>
+            <li><strong>Values that survive a reset</strong>: <code>reset_game()</code> puts everything back to the start. The high score is special: it must <em>not</em> be reset, or it would be forgotten every time you press ENTER.</li>
+            <li><strong>Flags</strong>: a flag is a <code>true</code>/<code>false</code> variable that remembers something happened, like &ldquo;this game beat the high score.&rdquo;</li>
+            <li><code>require("localstorage")</code> loads a library that saves small pieces of data in your browser, so they're still there after you close the page.</li>
+            <li><strong>Saved values are strings</strong>. If you save the number <code>42</code>, you get back the string <code>"42"</code>. <code>tonumber("42")</code> turns it back into a number. If nothing was saved yet, you get <code>nil</code>, and <code>tonumber(nil) or 0</code> gives <code>0</code>.</li>
         </ul>
     </div>
 
@@ -551,11 +551,11 @@ local new_high_score = false</code></pre>
     <!-- Task 2 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Check for a high score at game over</div>
-        <div class="step-task">In <code>update()</code>, right where <code>game_over</code> becomes <code>true</code>, check if this game's score beat the high score. If it did, update <code>high_score</code> and set <code>new_high_score</code> to <code>true</code>. Then make <code>reset_game()</code> set <code>new_high_score</code> back to <code>false</code>.</div>
+        <div class="step-task">In <code>update()</code>, right where <code>game_over</code> becomes <code>true</code> (if you did Bonus 10: Game States, where your state changes to game over), check if this game's score beat the high score. If it did, update <code>high_score</code> and set <code>new_high_score</code> to <code>true</code>. Then make <code>reset_game()</code> set <code>new_high_score</code> back to <code>false</code>.</div>
         <div class="step-note">Do <strong>not</strong> add <code>high_score = 0</code> to <code>reset_game()</code>. The whole point of a high score is that it's still there in the next game.</div>
         <div class="hints-container">
             <div class="hint" hidden>Look in the ship vs meteor collision for <code>game_over = true</code>. Your check goes after that line and before <code>return</code>.</div>
-            <div class="hint" hidden>Use <code>if score &gt; high_score then</code>. Why <code>&gt;</code> and not <code>&gt;=</code>? Tying your best isn't a <em>new</em> high score.</div>
+            <div class="hint" hidden>Use <code>if score &gt; high_score then</code>. Use <code>&gt;</code> and not <code>&gt;=</code>, because tying your best isn't a <em>new</em> high score.</div>
         </div>
         <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
         <div class="solution" hidden>
@@ -576,7 +576,7 @@ new_high_score = false</code></pre>
     <!-- Task 3 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Show the high score</div>
-        <div class="step-task">Draw <code>"High Score: " .. high_score</code> in the HUD under the score (move the controls text down to make room). Also draw it, centered, on the game over screen between the score and the restart prompt.</div>
+        <div class="step-task">Draw <code>"High Score: " .. high_score</code> in the HUD, one line (20 pixels) below the score. Move the controls text, and any HUD lines below it, down 20 pixels to make room. Also draw it, centered, on the game over screen 30 pixels below the score, and move the restart prompt down 30 pixels.</div>
         <div class="hints-container">
             <div class="hint" hidden>In the HUD, put the high score at <code>y = 30</code> and move the controls text to <code>y = 50</code>.</div>
             <div class="hint" hidden>On the game over screen, copy the pattern used for <code>score_text</code>: make the text, measure it with <code>canvas.get_text_width</code>, and center it.</div>
@@ -606,7 +606,7 @@ canvas.draw_text((SCREEN_W - restart_w) / 2, SCREEN_H / 2 + 70, restart_text)</c
     <!-- Task 4 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Celebrate a new high score</div>
-        <div class="step-task">On the game over screen, if <code>new_high_score</code> is <code>true</code>, draw <code>"NEW HIGH SCORE!"</code> in yellow, centered, above the <strong>GAME OVER</strong> title.</div>
+        <div class="step-task">On the game over screen, if <code>new_high_score</code> is <code>true</code>, draw <code>"NEW HIGH SCORE!"</code> in yellow (255, 220, 50), centered, 40 pixels above the <strong>GAME OVER</strong> title.</div>
         <div class="hints-container">
             <div class="hint" hidden>Put it at the end of the game over overlay, inside <code>if new_high_score then ... end</code>.</div>
             <div class="hint" hidden>The title is at <code>SCREEN_H / 2 - 60</code>. Try <code>SCREEN_H / 2 - 100</code>. Yellow is <code>canvas.set_color(255, 220, 50)</code>.</div>
@@ -632,7 +632,7 @@ end</code></pre>
         <div class="step-location">Where: at the top of the file, right after <code>local canvas = require("canvas")</code></div>
         <pre class="code-block"><code class="lua">local localstorage = require("localstorage")
 localstorage.set_prefix("space_shooter_")</code></pre>
-        <div class="step-desc">Your browser keeps one storage area for every program on this site. The prefix gets added to the front of every key, so our <code>"high_score"</code> is really saved as <code>"space_shooter_high_score"</code> and won't mix with other games' high scores.</div>
+        <div class="step-desc">Your browser keeps one storage area for every program on this site. Each saved value has a name, called its key. The prefix gets added to the front of every key. So your <code>"high_score"</code> is really saved as <code>"space_shooter_high_score"</code> and won't mix with other games' high scores.</div>
     </div>
 
     <!-- Task 5 -->
@@ -657,7 +657,7 @@ local new_high_score = false</code></pre>
     <!-- Task 6 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 6: Save a new high score</div>
-        <div class="step-task">When the player beats the high score, save it with <code>localstorage.set_item</code> under the same key.</div>
+        <div class="step-task">When you beat the high score, save it with <code>localstorage.set_item</code> under the same key. It takes the key first, then the value to save. You can pass the number as it is: it's turned into text for you when it's saved.</div>
         <div class="hints-container">
             <div class="hint" hidden>You only need to save when the high score changes. You already have an <code>if</code> for that from Task 2.</div>
             <div class="hint" hidden>Add <code>localstorage.set_item("high_score", high_score)</code> inside that <code>if</code>. The number is turned into a string for you when it's saved.</div>
@@ -691,9 +691,9 @@ return</code></pre>
     <div class="stretch">
         <h2>Going Further</h2>
         <ul>
-            <li>Show <strong>NEW HIGH SCORE!</strong> in the HUD the moment you pass the old record, not just at game over.</li>
+            <li>Show <strong>NEW HIGH SCORE!</strong> in the HUD the moment you pass the old record, not only at game over.</li>
             <li>Add a key (like <code>R</code> on the game over screen) that resets the saved high score with <code>localstorage.remove_item("high_score")</code>.</li>
-            <li>Save the <strong>top 5</strong> scores instead of just one. (Hint: save each one under its own key, like <code>"score_1"</code> to <code>"score_5"</code>.)</li>
+            <li>Save the <strong>top 5</strong> scores instead of only one. (Hint: save each one under its own key, like <code>"score_1"</code> to <code>"score_5"</code>.)</li>
         </ul>
     </div>
 

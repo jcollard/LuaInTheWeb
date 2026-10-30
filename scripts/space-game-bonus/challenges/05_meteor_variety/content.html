@@ -1,25 +1,25 @@
     <div class="concepts">
         <h2>New Concepts</h2>
         <ul>
-            <li><strong>Per-object data</strong> &mdash; right now every meteor shares <code>meteor_w</code>, <code>meteor_h</code> and <code>meteor_speed</code>. To make meteors different, each meteor table needs its own <code>meteor.w</code>, <code>meteor.h</code> and <code>meteor.speed</code>.</li>
-            <li><strong>Refactoring</strong> &mdash; changing <em>how</em> your code stores things without changing what the game does. When you move data, you must update <strong>every</strong> place that used the old names.</li>
-            <li><strong>Picking from a list</strong> &mdash; <code>kinds[math.random(#kinds)]</code> picks one random entry from a list.</li>
+            <li><strong>Per-object data</strong>: right now every meteor shares <code>meteor_w</code>, <code>meteor_h</code> and <code>meteor_speed</code>. To make meteors different, each meteor table needs its own <code>meteor.w</code>, <code>meteor.h</code> and <code>meteor.speed</code>.</li>
+            <li><strong>Refactoring</strong>: changing <em>how</em> your code stores things without changing what the game does. When you move data, you must update <strong>every</strong> place that used the old names.</li>
+            <li><strong>Picking from a list</strong>: <code>kinds[math.random(#kinds)]</code> picks one random entry from a list. With only one number in the parentheses, <code>math.random</code> gives a whole number from 1 up to that number. Here that number is the length of the list.</li>
             <li><code>math.random()</code> with <strong>no arguments</strong> gives a decimal between <code>0</code> and <code>1</code> (like <code>0.73</code>). Multiply and subtract to get any range you want.</li>
-            <li><strong>Transforms</strong> &mdash; <code>canvas.save()</code>, <code>canvas.translate(x, y)</code>, <code>canvas.rotate(radians)</code> and <code>canvas.restore()</code> let you move and turn everything you draw.</li>
+            <li><strong>Transforms</strong>: <code>canvas.save()</code>, <code>canvas.translate(x, y)</code>, <code>canvas.rotate(radians)</code> and <code>canvas.restore()</code> let you move and turn everything you draw.</li>
         </ul>
     </div>
 
     <!-- Task 1 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Make a list of meteor kinds</div>
-        <div class="step-task">Load the two new images: <code>meteor_small.png</code> as <code>"meteor_small"</code> and <code>meteor_med.png</code> as <code>"meteor_med"</code>. Then, in the Meteors part of GAME STATE, make a list called <code>meteor_kinds</code> with three tables. Each table has an <code>image</code>, a <code>w</code>, an <code>h</code> and a <code>speed</code>:
+        <div class="step-task">With your other image-loading lines, load the two new images: <code>meteor_small.png</code> as <code>"meteor_small"</code> and <code>meteor_med.png</code> as <code>"meteor_med"</code>. Then, in the Meteors part of GAME STATE, make a list called <code>meteor_kinds</code> with three tables. Each table has an <code>image</code>, a <code>w</code>, an <code>h</code> and a <code>speed</code>:
             <ul>
                 <li>small: <code>"meteor_small"</code>, 28 by 28, speed 220</li>
                 <li>medium: <code>"meteor_med"</code>, 43 by 43, speed 170</li>
                 <li>big: <code>"meteor"</code>, 60 by 50, speed 110</li>
             </ul>
         </div>
-        <div class="step-note">Small meteors are fast and hard to hit. Big ones are slow but hard to dodge. That mix is what makes it fun.</div>
+        <div class="step-note">Small meteors are fast and hard to hit. Big ones are slow but hard to dodge.</div>
         <div class="hints-container">
             <div class="hint" hidden>Loading images works just like the ship, laser and meteor lines you already have.</div>
             <div class="hint" hidden>A list of tables looks like <code>local meteor_kinds = { {...}, {...}, {...} }</code>. Each inner table is written like <code>{ image = "meteor_small", w = 28, h = 28, speed = 220 }</code>.</div>
@@ -45,7 +45,7 @@ canvas.assets.load_image("meteor_med", "meteor_med.png")</code></pre>
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Each meteor picks a kind</div>
         <div class="step-task">Change <code>spawn_meteor()</code> so it picks a random kind from <code>meteor_kinds</code>, then copies that kind's <code>w</code>, <code>h</code>, <code>speed</code> and <code>image</code> into the new meteor table. Use the kind's width and height (not <code>meteor_w</code> and <code>meteor_h</code>) for the starting <code>x</code> and <code>y</code> too.</div>
         <div class="hints-container">
-            <div class="hint" hidden><code>#meteor_kinds</code> is 3. <code>math.random(3)</code> gives 1, 2 or 3. Use that as the index into the list.</div>
+            <div class="hint" hidden><code>#meteor_kinds</code> is 3. <code>math.random(3)</code> gives 1, 2 or 3. Use that number to pick a position in the list.</div>
             <div class="hint" hidden>Start with <code>local kind = meteor_kinds[math.random(#meteor_kinds)]</code>. Then inside the meteor table write <code>w = kind.w,</code> and so on for each field.</div>
         </div>
         <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
@@ -69,7 +69,7 @@ end</code></pre>
     <!-- Task 3 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Replace the old shared variables</div>
-        <div class="step-task">Delete the <code>meteor_w</code>, <code>meteor_h</code> and <code>meteor_speed</code> lines from GAME STATE. Then fix every place that used them so it uses the meteor's own fields instead: moving meteors, both collision checks, and drawing (draw <code>meteor.image</code> at the meteor's own size).</div>
+        <div class="step-task">Delete the <code>meteor_w</code>, <code>meteor_h</code> and <code>meteor_speed</code> lines from GAME STATE. Then fix every place that used them, so each one uses the meteor's own fields instead. Those places are moving meteors, both collision checks, and drawing (draw <code>meteor.image</code> at the meteor's own size for now, since Step 5 replaces the drawing loop).</div>
         <div class="step-note">Deleting the old variables first is a useful trick. If you miss a spot, the old name is now <code>nil</code>, so the game usually stops with an error like <code>attempt to perform arithmetic on a nil value (global 'meteor_speed')</code>. Read the line number in the error and look there. You can also search your file for <code>meteor_w</code>, <code>meteor_h</code> and <code>meteor_speed</code> to find any leftovers.</div>
         <div class="hints-container">
             <div class="hint" hidden>There are four places to fix: the meteor movement loop, the laser-vs-meteor check, the ship-vs-meteor check, and the meteor drawing loop.</div>
@@ -99,7 +99,7 @@ canvas.draw_image(meteor.image, meteor.x, meteor.y, meteor.w, meteor.h)</code></
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Give each meteor a spin</div>
         <div class="step-task">Add two more fields to each new meteor: <code>angle</code> (starts at <code>0</code>) and <code>spin</code>, a random number between <code>-2</code> and <code>2</code>. Then, in the meteor movement loop, add <code>spin * dt</code> to the meteor's angle every frame.</div>
-        <div class="step-note">Angles here are in <strong>radians</strong>. A full turn is about <code>6.28</code> radians, so a spin of <code>2</code> is roughly one turn every three seconds. A negative spin turns the other way.</div>
+        <div class="step-note">Angles here are in <strong>radians</strong>, which measure angles the way degrees do. A full turn (360 degrees) is about <code>6.28</code> radians, so a spin of <code>2</code> is roughly one turn every three seconds. A negative spin turns the other way.</div>
         <div class="hints-container">
             <div class="hint" hidden><code>math.random()</code> gives 0 to 1. <code>math.random() * 4</code> gives 0 to 4. What do you subtract to get -2 to 2?</div>
             <div class="hint" hidden>In <code>spawn_meteor()</code> add <code>angle = 0,</code> and <code>spin = math.random() * 4 - 2</code>. In <code>update()</code>, the angle grows just like <code>y</code> does: <code>meteors[i].angle = meteors[i].angle + meteors[i].spin * dt</code>.</div>
@@ -129,7 +129,7 @@ for i, meteor in ipairs(meteors) do
     canvas.draw_image(meteor.image, -meteor.w / 2, -meteor.h / 2, meteor.w, meteor.h)
     canvas.restore()
 end</code></pre>
-        <div class="step-desc"><code>canvas.rotate()</code> always turns around the point <code>(0, 0)</code>. Normally that's the top-left corner of the screen, so rotating there would swing the meteor in a big circle across the screen! Instead, <code>translate</code> first moves <code>(0, 0)</code> to the <strong>center of the meteor</strong>. Then <code>rotate</code> turns around that center. Finally we draw the image half its width to the left and half its height up (<code>-meteor.w / 2</code>, <code>-meteor.h / 2</code>), so the image sits centered on the new <code>(0, 0)</code>. <code>canvas.save()</code> remembers the normal canvas and <code>canvas.restore()</code> puts it back, so the next meteor, the ship and the HUD aren't moved or turned. Every <code>save</code> needs a matching <code>restore</code>.</div>
+        <div class="step-desc"><code>canvas.rotate()</code> always turns around the point <code>(0, 0)</code>. Normally that's the top-left corner of the screen, so rotating there would swing the meteor in a big circle across the screen! Instead, <code>translate</code> first moves <code>(0, 0)</code> to the <strong>center of the meteor</strong>. Then <code>rotate</code> turns around that center. The last line draws the image half its width to the left and half its height up (<code>-meteor.w / 2</code>, <code>-meteor.h / 2</code>). That way the image sits centered on the new <code>(0, 0)</code>. <code>canvas.save()</code> remembers the normal canvas and <code>canvas.restore()</code> puts it back, so the next meteor, the ship and the HUD aren't moved or turned. Every <code>save</code> needs a matching <code>restore</code>. If one is missing, everything drawn after it stays moved and turned.</div>
     </div>
 
     <div class="check-work">
@@ -149,7 +149,7 @@ end</code></pre>
         <h2>Going Further</h2>
         <ul>
             <li>Give each kind a <code>points</code> value. Small meteors are hard to hit, so maybe they're worth 3.</li>
-            <li>Add a little random speed to every meteor, like <code>kind.speed + math.random(-30, 30)</code>.</li>
+            <li>Add a little random speed to every meteor, like <code>kind.speed + math.random(-30, 30)</code>, so meteors of the same kind don't all fall at the same speed.</li>
             <li>Put the small kind in <code>meteor_kinds</code> twice. What happens to how often small meteors show up? Why?</li>
         </ul>
     </div>

@@ -269,8 +269,10 @@ local function draw()
     -- Cooldown bar under the ship (shrinks as the cooldown runs out)
     if fire_timer > 0 then
         local bar_w = ship_w * (fire_timer / FIRE_COOLDOWN)
+        -- Stay on screen when the ship is at the bottom edge
+        local bar_y = math.min(ship_y + ship_h + 2, SCREEN_H - 4)
         canvas.set_color(255, 200, 50)
-        canvas.fill_rect(ship_x, ship_y + ship_h + 2, bar_w, 4)
+        canvas.fill_rect(ship_x, bar_y, bar_w, 4)
     end
 
     -- HUD

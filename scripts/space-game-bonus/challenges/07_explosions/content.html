@@ -1,20 +1,20 @@
     <div class="concepts">
         <h2>New Concepts</h2>
         <ul>
-            <li><strong>Particles</strong> &mdash; lots of tiny, short-lived dots. Each one is a table in a list, just like your stars. The difference: a particle has a <strong>velocity</strong> (<code>vx</code>, <code>vy</code>) so it can fly in any direction, and a <strong>life</strong> that counts down until it disappears.</li>
-            <li><strong>Velocity</strong> &mdash; <code>vx</code> is how many pixels per second something moves sideways, and <code>vy</code> is how many it moves up or down. Each frame: <code>p.x = p.x + p.vx * dt</code>.</li>
-            <li><code>math.cos(angle)</code> and <code>math.sin(angle)</code> &mdash; turn a <em>direction</em> into its <em>x part</em> and <em>y part</em>. Pointing right, <code>cos</code> is <code>1</code> and <code>sin</code> is <code>0</code> (all sideways). Pointing straight down, <code>cos</code> is <code>0</code> and <code>sin</code> is <code>1</code> (all downward). In between, you get a mix. Multiply both by a speed and you have <code>vx</code> and <code>vy</code>.</li>
-            <li><strong>Radians</strong> &mdash; Lua measures angles in radians, not degrees. A full circle is <code>math.pi * 2</code> (about <code>6.28</code>). So <code>math.random() * math.pi * 2</code> is a random direction anywhere around the circle.</li>
-            <li><code>math.random()</code> with no arguments &mdash; gives a random decimal between <code>0</code> and <code>1</code> (like <code>0.73</code>).</li>
-            <li><code>canvas.set_global_alpha(a)</code> &mdash; makes everything drawn after it see-through. <code>1</code> is solid, <code>0.5</code> is half see-through, <code>0</code> is invisible. It stays set until you change it.</li>
-            <li><code>canvas.fill_circle(x, y, radius)</code> &mdash; draws a filled circle centered at <code>(x, y)</code>.</li>
+            <li><strong>Particles</strong> are lots of tiny, short-lived dots. Each one is a table in a list, like your stars. The difference: a particle has a <strong>velocity</strong> (<code>vx</code>, <code>vy</code>) so it can fly in any direction, and a <strong>life</strong> that counts down until it disappears.</li>
+            <li><strong>Velocity</strong> is how fast something moves and in which direction. <code>vx</code> is how many pixels per second something moves sideways, and <code>vy</code> is how many it moves up or down. Each frame: <code>p.x = p.x + p.vx * dt</code>.</li>
+            <li><code>math.cos(angle)</code> and <code>math.sin(angle)</code> turn a <em>direction</em> into its <em>x part</em> and <em>y part</em>. Pointing right, <code>cos</code> is <code>1</code> and <code>sin</code> is <code>0</code> (all sideways). Pointing straight down, <code>cos</code> is <code>0</code> and <code>sin</code> is <code>1</code> (all downward). In between, you get a mix. Multiply both by a speed and you have <code>vx</code> and <code>vy</code>.</li>
+            <li><strong>Radians</strong> are how Lua measures angles, instead of degrees. A full circle is <code>math.pi * 2</code> (about <code>6.28</code>). So <code>math.random() * math.pi * 2</code> is a random direction anywhere around the circle.</li>
+            <li><code>math.random()</code> with no arguments gives a random decimal between <code>0</code> and <code>1</code> (like <code>0.73</code>).</li>
+            <li><code>canvas.set_global_alpha(a)</code> makes everything drawn after it see-through. <code>1</code> is solid, <code>0.5</code> is half see-through, <code>0</code> is invisible. It stays set until you change it.</li>
+            <li><code>canvas.fill_circle(x, y, radius)</code> draws a filled circle centered at <code>(x, y)</code>.</li>
         </ul>
     </div>
 
     <!-- Task 1 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Write spawn_explosion</div>
-        <div class="step-task">Add an empty <code>particles</code> list to the GAME STATE. Then write a function <code>spawn_explosion(x, y, count)</code> that adds <code>count</code> particles at <code>(x, y)</code>. Each particle needs <code>x</code>, <code>y</code>, <code>vx</code>, <code>vy</code>, <code>life</code>, <code>max_life</code>, <code>size</code>, and a color (<code>r</code>, <code>g</code>, <code>b</code>). Pick a random direction and a random speed between <code>50</code> and <code>200</code> for each one.</div>
+        <div class="step-task">Add an empty <code>particles</code> list to the GAME STATE. Then write a function <code>spawn_explosion(x, y, count)</code> that adds <code>count</code> particles at <code>(x, y)</code>. Each particle needs <code>x</code>, <code>y</code>, <code>vx</code>, <code>vy</code>, <code>life</code>, <code>max_life</code>, <code>size</code>, and a color (<code>r</code>, <code>g</code>, <code>b</code>). Pick a random direction and a random speed between <code>50</code> and <code>200</code> for each one. Give each particle a random <code>life</code> between <code>0.5</code> and <code>1</code> second and a random <code>size</code> from <code>2</code> to <code>4</code>. For the color, keep red at <code>255</code> and blue at <code>50</code>, and pick green randomly between <code>100</code> and <code>220</code>.</div>
         <div class="step-note">Put the function above <code>reset_game()</code> in its own <code>-- SPAWN EXPLOSION</code> section, the same way <code>spawn_meteor()</code> has one. <code>life</code> and <code>max_life</code> start as the same number. <code>life</code> counts down; <code>max_life</code> remembers where it started so you can work out how faded the particle should be.</div>
         <div class="hints-container">
             <div class="hint" hidden>Look at <code>init_stars()</code> and <code>generate_star()</code>. You need a <code>for i = 1, count do</code> loop that builds a table and calls <code>table.insert(particles, ...)</code>.</div>
@@ -55,9 +55,9 @@ end</code></pre>
     <!-- Task 2 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Blow up meteors</div>
-        <div class="step-task">When a laser hits a meteor, call <code>spawn_explosion</code> with about <code>18</code> particles at the <strong>center</strong> of the meteor.</div>
+        <div class="step-task">When a laser hits a meteor, call <code>spawn_explosion</code> with about <code>18</code> particles at the <strong>center</strong> of the meteor. If you did Bonus 5: Meteor Variety, each meteor has its own <code>w</code> and <code>h</code>, so use <code>meteors[j].w</code> and <code>meteors[j].h</code> instead of <code>meteor_w</code> and <code>meteor_h</code>.</div>
         <div class="hints-container">
-            <div class="hint" hidden>This goes in the laser vs meteor collision loop. Be careful about the order: you need the meteor's position, so call it <em>before</em> <code>table.remove(meteors, j)</code>.</div>
+            <div class="hint" hidden>This goes in the laser vs meteor collision loop. Order matters here: once the meteor is removed, you can't read its position, so call it <em>before</em> <code>table.remove(meteors, j)</code>.</div>
             <div class="hint" hidden><code>meteors[j].x</code> is the meteor's left edge. Its center is <code>meteors[j].x + meteor_w / 2</code>. Do the same for <code>y</code> with <code>meteor_h</code>.</div>
         </div>
         <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
@@ -72,7 +72,7 @@ table.remove(meteors, j)</code></pre>
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Move particles and let them die</div>
         <div class="step-task">In <code>update()</code>, loop over the particles. Move each one by its velocity, take <code>dt</code> off its <code>life</code>, and remove it when its life reaches <code>0</code>.</div>
-        <div class="step-note">This is your star-field loop with two changes: particles move in <code>x</code> <em>and</em> <code>y</code>, and instead of wrapping back to the top, they get removed. Put this loop at the very top of <code>update()</code>, <strong>above</strong> <code>if game_over then return end</code> (you'll need to move <code>local dt = canvas.get_delta()</code> up too). In Task 5 your ship will explode on game over. If the particle loop were below the <code>return</code>, it would never run during game over and the explosion would freeze in mid-air.</div>
+        <div class="step-note">This is your star-field loop with two changes: particles move in <code>x</code> <em>and</em> <code>y</code>, and instead of wrapping back to the top, they get removed. The tricky part is where it goes. Put this loop at the very top of <code>update()</code>, <strong>above</strong> <code>if game_over then return end</code> (you'll need to move <code>local dt = canvas.get_delta()</code> up too). If you did Bonus 10: Game States, put the loop above <code>if state ~= "playing" then return end</code>. In Task 5 your ship will explode on game over. If the particle loop were below the <code>return</code>, it would never run during game over and the explosion would freeze in mid-air.</div>
         <div class="hints-container">
             <div class="hint" hidden>You are removing items, so loop backwards: <code>for i = #particles, 1, -1 do</code>. Writing <code>local p = particles[i]</code> at the start saves a lot of typing.</div>
             <div class="hint" hidden>Three updates: <code>p.x = p.x + p.vx * dt</code>, the same for <code>y</code>, and <code>p.life = p.life - dt</code>. Then <code>if p.life &lt;= 0 then table.remove(particles, i) end</code>.</div>
@@ -126,7 +126,7 @@ canvas.set_global_alpha(1)</code></pre>
     <!-- Task 5 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 5: Explode the ship</div>
-        <div class="step-task">When a meteor hits the ship, spawn a bigger explosion (about <code>40</code> particles) at the center of the ship. Stop drawing the ship once the game is over, since it just blew up. Finally, clear the particles in <code>reset_game()</code>.</div>
+        <div class="step-task">When a meteor hits the ship, spawn a bigger explosion (about <code>40</code> particles) at the center of the ship. Stop drawing the ship once the game is over, since it just blew up. Finally, clear the particles in <code>reset_game()</code>. If you did Bonus 10: Game States, check <code>state ~= "game_over"</code> instead of <code>not game_over</code>.</div>
         <div class="hints-container">
             <div class="hint" hidden>The explosion goes in the ship vs meteor collision, right before <code>game_over = true</code>. The ship's center is <code>ship_x + ship_w / 2</code>, <code>ship_y + ship_h / 2</code>.</div>
             <div class="hint" hidden>Wrap the ship's <code>draw_image</code> in <code>if not game_over then ... end</code>. In <code>reset_game()</code>, add <code>particles = {}</code>.</div>

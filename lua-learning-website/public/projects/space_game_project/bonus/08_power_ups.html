@@ -525,19 +525,19 @@ pre.code-block code {
     <div class="concepts">
         <h2>New Concepts</h2>
         <ul>
-            <li><strong>A "kind" field</strong> &mdash; all three power-ups fall and get collected the same way. Instead of three lists, use one list where each power-up has <code>kind = "triple"</code>, <code>"shield"</code>, or <code>"speed"</code>. Check the kind only when it matters.</li>
-            <li><strong>Picking from a list</strong> &mdash; <code>POWERUP_KINDS[math.random(1, #POWERUP_KINDS)]</code> picks a random item from a list.</li>
-            <li><strong>Building a name with <code>..</code></strong> &mdash; if you load images named <code>"powerup_triple"</code>, <code>"powerup_shield"</code>, and <code>"powerup_speed"</code>, then <code>"powerup_" .. p.kind</code> is always the right image name.</li>
-            <li><strong>Countdown timers</strong> &mdash; set <code>triple_timer = 5</code> to switch triple shot on, and subtract <code>dt</code> each frame. While it's above <code>0</code>, the effect is on.</li>
-            <li><strong>Default values with <code>or</code></strong> &mdash; <code>vx or 0</code> means "use <code>vx</code>, but if nobody passed it in (it's <code>nil</code>), use <code>0</code>". This lets <code>spawn_laser(x, y)</code> keep working exactly as before.</li>
-            <li><code>string.format("%.1f", t)</code> &mdash; turns a number into text with exactly one digit after the decimal point. <code>4.2371</code> becomes <code>"4.2"</code>.</li>
+            <li><strong>A "kind" field</strong> lets one list hold different things. All three power-ups fall and get collected the same way. Instead of three lists, use one list where each power-up has <code>kind = "triple"</code>, <code>"shield"</code>, or <code>"speed"</code>. Check the kind only when it matters.</li>
+            <li><strong>Picking from a list</strong>: <code>POWERUP_KINDS[math.random(1, #POWERUP_KINDS)]</code> picks a random item from a list.</li>
+            <li><strong>Building a name with <code>..</code></strong>: if you load images named <code>"powerup_triple"</code>, <code>"powerup_shield"</code>, and <code>"powerup_speed"</code>, then <code>"powerup_" .. p.kind</code> is always the right image name.</li>
+            <li><strong>Countdown timers</strong>: set <code>triple_timer = 5</code> to switch triple shot on, and subtract <code>dt</code> each frame. While it's above <code>0</code>, the effect is on.</li>
+            <li><strong>Default values with <code>or</code></strong>: <code>vx or 0</code> means "use <code>vx</code>, but if nobody passed it in (it's <code>nil</code>), use <code>0</code>". This lets <code>spawn_laser(x, y)</code> keep working exactly as before.</li>
+            <li><code>string.format("%.1f", t)</code> turns a number into text with exactly one digit after the decimal point. <code>4.2371</code> becomes <code>"4.2"</code>.</li>
         </ul>
     </div>
 
     <!-- Task 1 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Power-up state and images</div>
-        <div class="step-task">In GAME STATE, add a <code>powerups</code> list, a size (<code>34</code>) and fall speed (<code>100</code>) for power-ups, a drop chance (<code>5</code>, meaning 1 in 5), a duration (<code>5</code> seconds), a list of the three kinds, two timers (<code>triple_timer</code>, <code>speed_timer</code>), and <code>shield_active</code>. Then load the four new images.</div>
+        <div class="step-task">In GAME STATE, add an empty <code>powerups</code> list. Then add the power-up settings: <code>powerup_size</code> (<code>34</code>), <code>powerup_speed</code> (<code>100</code>), <code>POWERUP_CHANCE</code> (<code>5</code>, meaning 1 in 5), <code>POWERUP_DURATION</code> (<code>5</code> seconds), and <code>POWERUP_KINDS</code>, a list of the three kinds. Add two timers that start at <code>0</code> (<code>triple_timer</code>, <code>speed_timer</code>), and <code>shield_active</code>, which starts as <code>false</code>. Then load the four new images: <code>powerup_triple.png</code>, <code>powerup_shield.png</code>, <code>powerup_speed.png</code>, and <code>shield.png</code>.</div>
         <div class="step-note">The shield is different from the other two: it has no timer. It stays on until a meteor hits you, then it's used up. That makes it feel like an extra life you have to earn. (If you'd rather it run out after a few seconds, give it a timer like the others.)</div>
         <div class="hints-container">
             <div class="hint" hidden>Look at how the meteor variables are grouped. Write a <code>-- Power-ups</code> block the same way. The kinds list is <code>{"triple", "shield", "speed"}</code>.</div>
@@ -568,9 +568,9 @@ canvas.assets.load_image("shield", "shield.png")</code></pre>
     <!-- Task 2 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Drop power-ups from meteors</div>
-        <div class="step-task">Write <code>spawn_powerup(x, y)</code> that adds a power-up of a random kind to the list. Then, when a laser destroys a meteor, give it a 1 in <code>POWERUP_CHANCE</code> chance of dropping a power-up centered where the meteor was.</div>
+        <div class="step-task">Write <code>spawn_powerup(x, y)</code> that adds a power-up of a random kind to the list. Put it in a new section above RESET GAME. Then, when a laser destroys a meteor, give it a 1 in <code>POWERUP_CHANCE</code> chance of dropping a power-up centered where the meteor was. If you did Bonus 5: Meteor Variety, use each meteor's own <code>w</code> and <code>h</code> instead of <code>meteor_w</code> and <code>meteor_h</code>.</div>
         <div class="hints-container">
-            <div class="hint" hidden><code>spawn_powerup</code> looks just like <code>spawn_meteor</code>, but the table has <code>x</code>, <code>y</code>, and <code>kind = POWERUP_KINDS[math.random(1, #POWERUP_KINDS)]</code>.</div>
+            <div class="hint" hidden><code>spawn_powerup</code> is built like <code>spawn_meteor</code>, but the table has <code>x</code>, <code>y</code>, and <code>kind = POWERUP_KINDS[math.random(1, #POWERUP_KINDS)]</code>.</div>
             <div class="hint" hidden>"1 in 5" is <code>math.random(1, POWERUP_CHANCE) == 1</code>. Do it before <code>table.remove(meteors, j)</code>, while you can still read the meteor's position.</div>
             <div class="hint" hidden>To center the power-up on the meteor: <code>meteors[j].x + meteor_w / 2 - powerup_size / 2</code>. That's "meteor's center, then back up half a power-up". Same for <code>y</code>.</div>
         </div>
@@ -600,7 +600,7 @@ table.remove(meteors, j)</code></pre>
     <!-- Task 3 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Fall, collect, and count down</div>
-        <div class="step-task">In <code>update()</code>, before the ship vs meteor collision: count both timers down (never below <code>0</code>). Then move every power-up down. If the ship touches one, switch on its effect and remove it. If it falls off the bottom, just remove it.</div>
+        <div class="step-task">In <code>update()</code>, before the ship vs meteor collision: count both timers down (never below <code>0</code>). Then move every power-up down. If the ship touches one, switch on its effect and remove it. If it falls off the bottom, remove it.</div>
         <div class="hints-container">
             <div class="hint" hidden><code>math.max(0, triple_timer - dt)</code> subtracts <code>dt</code> but stops at <code>0</code>.</div>
             <div class="hint" hidden>Loop backwards with <code>for i = #powerups, 1, -1 do</code>. Use <code>check_collision</code> with the ship and <code>powerup_size</code> for both width and height.</div>
@@ -640,7 +640,7 @@ end</code></pre>
         <div class="step-task">Give lasers a sideways speed, <code>vx</code>. Add a third parameter to <code>spawn_laser(x, y, vx)</code> that defaults to <code>0</code>, and move each laser sideways by <code>vx</code> every frame. Then, while <code>triple_timer</code> is above <code>0</code>, pressing SPACE fires two extra lasers: one drifting left (<code>vx = -150</code>) and one drifting right (<code>vx = 150</code>).</div>
         <div class="hints-container">
             <div class="hint" hidden>In <code>spawn_laser</code>, add <code>vx = vx or 0</code> to the laser table. Your existing <code>spawn_laser(x, y)</code> call still works: <code>vx</code> is <code>nil</code>, so it becomes <code>0</code>.</div>
-            <div class="hint" hidden>In the "Move lasers" loop, add <code>lasers[i].x = lasers[i].x + lasers[i].vx * dt</code>.</div>
+            <div class="hint" hidden>In the "Move lasers" loop, add <code>lasers[i].x = lasers[i].x + lasers[i].vx * dt</code>. If you get an error about a nil value on this line, check the <code>vx</code> line in <code>spawn_laser</code>.</div>
             <div class="hint" hidden>When firing, save the starting x in <code>local laser_x = ship_x + ship_w / 2 - laser_w / 2</code> so you don't type it three times. Fire the normal laser, then <code>if triple_timer &gt; 0 then</code> fire the two angled ones.</div>
         </div>
         <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
@@ -676,7 +676,7 @@ end</code></pre>
     <!-- Task 5 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 5: Speed boost and shield</div>
-        <div class="step-task">While <code>speed_timer</code> is above <code>0</code>, the ship moves twice as fast. And when a meteor hits the ship while <code>shield_active</code> is true, the shield is used up and the meteor is destroyed instead of ending the game.</div>
+        <div class="step-task">While <code>speed_timer</code> is above <code>0</code>, the ship moves twice as fast. When a meteor hits the ship while <code>shield_active</code> is true, the shield is used up. The meteor is destroyed and the game keeps going. (If you did Bonus 10: Game States, the <code>else</code> part sets <code>state = "game_over"</code> instead of <code>game_over = true</code>. Keep anything else your game already does when it ends, like the game over sound from Bonus 13: Sound Effects, in the <code>else</code> part too.)</div>
         <div class="step-note">For speed, don't change <code>ship_speed</code> itself. If you double it, you have to remember to halve it again later (and in <code>reset_game()</code>). Instead, work out a <code>local speed</code> each frame and move with that.</div>
         <div class="hints-container">
             <div class="hint" hidden>At the top of the movement code in <code>user_input()</code>: <code>local speed = ship_speed</code>, then <code>if speed_timer &gt; 0 then speed = ship_speed * 2 end</code>. Use <code>speed</code> in all four movement lines.</div>
@@ -719,7 +719,7 @@ end</code></pre>
     <!-- Task 6 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 6: Draw it all and reset</div>
-        <div class="step-task">Draw the falling power-ups. While the shield is on, draw the <code>shield</code> image centered on the ship, 20 pixels wider and taller than the ship. In the HUD, under the controls text, list each active power-up on its own line with the seconds left (for example <code>Triple Shot: 3.4</code> or <code>Shield: ON</code>). Finally, make <code>reset_game()</code> clear the power-ups and switch off every effect.</div>
+        <div class="step-task">Draw the falling power-ups. While the shield is on, draw the <code>shield</code> image centered on the ship, 20 pixels wider and taller than the ship. In the HUD, starting one line below your last HUD line, list each active power-up on its own line, 20 pixels apart. Triple Shot and Speed show the seconds left, and Shield shows ON (for example <code>Triple Shot: 3.4</code> or <code>Shield: ON</code>). Finally, make <code>reset_game()</code> clear the power-ups and switch off every effect.</div>
         <div class="hints-container">
             <div class="hint" hidden>Draw power-ups with <code>canvas.draw_image("powerup_" .. p.kind, p.x, p.y, powerup_size, powerup_size)</code>. Draw the shield <em>after</em> the ship so the bubble is on top.</div>
             <div class="hint" hidden>Centering works like before: the ship's center is <code>ship_x + ship_w / 2</code>, so the shield's left edge is that minus <code>shield_w / 2</code>.</div>

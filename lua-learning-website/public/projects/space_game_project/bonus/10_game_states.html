@@ -525,10 +525,10 @@ pre.code-block code {
     <div class="concepts">
         <h2>New Concepts</h2>
         <ul>
-            <li><strong>Game states</strong> &mdash; real games are made of screens: a title screen, the game itself, a pause screen, a game over screen. The game is always in exactly <em>one</em> of them.</li>
-            <li><strong>One string beats many booleans</strong> &mdash; with <code>game_over</code>, <code>paused</code>, and <code>on_title</code> as three separate <code>true</code>/<code>false</code> flags, nothing stops two of them being <code>true</code> at once. Paused <em>and</em> game over? On the title screen <em>and</em> paused? With one <code>state</code> variable, those impossible combinations simply can't happen.</li>
-            <li><strong>if / elseif chains</strong> &mdash; <code>if state == "title" then ... elseif state == "playing" then ... end</code> runs exactly one branch, so each screen gets its own input, update, and drawing rules.</li>
-            <li><strong>Custom fonts</strong> &mdash; <code>canvas.assets.load_font(name, file)</code> loads a font file, and <code>canvas.set_font_family(name)</code> switches to it. The normal font is called <code>"monospace"</code>.</li>
+            <li><strong>Game states</strong>: a game is made of screens, like a title screen, the game itself, a pause screen, and a game over screen. The game is always in exactly <em>one</em> of them.</li>
+            <li><strong>One string beats many booleans</strong>: with <code>game_over</code>, <code>paused</code>, and <code>on_title</code> as three separate <code>true</code>/<code>false</code> flags, nothing stops two of them being <code>true</code> at once. Paused <em>and</em> game over? On the title screen <em>and</em> paused? With one <code>state</code> variable, those impossible combinations can't happen.</li>
+            <li><strong>if / elseif chains</strong>: <code>if state == "title" then ... elseif state == "playing" then ... end</code> runs exactly one branch, so each screen gets its own input, update, and drawing rules.</li>
+            <li><strong>Custom fonts</strong>: <code>canvas.assets.load_font(name, file)</code> loads a font file, and <code>canvas.set_font_family(name)</code> switches to it. The normal font is called <code>"monospace"</code>.</li>
         </ul>
     </div>
 
@@ -542,17 +542,17 @@ canvas.assets.add_path("fonts")
 -- After the "Load images" lines
 -- Load fonts
 canvas.assets.load_font("future", "kenvector_future.ttf")</code></pre>
-        <div class="step-desc">This tells the game to look in the <code>fonts/</code> folder and loads <code>kenvector_future.ttf</code> under the name <code>"future"</code>. Later, <code>canvas.set_font_family("future")</code> makes all text drawn after it use that font, and <code>canvas.set_font_family("monospace")</code> switches back to the normal font. The font stays switched until you change it again &mdash; even into the next frame &mdash; so always switch back when you're done.</div>
+        <div class="step-desc">This tells the game to look in the <code>fonts/</code> folder and loads <code>kenvector_future.ttf</code> under the name <code>"future"</code>. Later, <code>canvas.set_font_family("future")</code> makes all text drawn after it use that font, and <code>canvas.set_font_family("monospace")</code> switches back to the normal font. The font stays switched until you change it again, even into the next frame, so always switch back when you're done.</div>
     </div>
 
     <!-- Task 1 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Replace <code>game_over</code> with <code>state</code></div>
-        <div class="step-task">Delete the <code>game_over</code> variable and add a <code>state</code> variable that starts as <code>"title"</code>. When the ship hits a meteor, set <code>state</code> to <code>"game_over"</code>. Remove the <code>game_over = false</code> line from <code>reset_game()</code>.</div>
-        <div class="step-note">Careful: Lua <em>won't</em> warn you about leftover uses of <code>game_over</code>. A name that doesn't exist is just <code>nil</code>, and <code>nil</code> counts as false. Use your editor's search to find every <code>game_over</code> &mdash; the next tasks replace the rest of them. The game won't work properly until you've finished Task 5.</div>
+        <div class="step-task">Delete the <code>game_over</code> variable and add a <code>state</code> variable that starts as <code>"title"</code>. In the ship vs meteor collision loop, set <code>state</code> to <code>"game_over"</code>. Remove the <code>game_over = false</code> line from <code>reset_game()</code>.</div>
+        <div class="step-note">Careful: Lua <em>won't</em> warn you about leftover uses of <code>game_over</code>. A name that doesn't exist is <code>nil</code>, and <code>nil</code> counts as false. Use your editor's search to find every <code>game_over</code>. The next tasks replace the rest of them. The game won't work properly until you've finished Task 5.</div>
         <div class="hints-container">
             <div class="hint" hidden>Write a comment listing all four possible values, so you (and anyone reading your code) know what <code>state</code> can be.</div>
-            <div class="hint" hidden>In the ship vs meteor collision loop, <code>game_over = true</code> becomes <code>state = "game_over"</code>. Spell the strings exactly the same everywhere &mdash; <code>"game_over"</code> and <code>"gameover"</code> are different strings!</div>
+            <div class="hint" hidden>In the ship vs meteor collision loop, <code>game_over = true</code> becomes <code>state = "game_over"</code>. Spell the strings exactly the same everywhere: <code>"game_over"</code> and <code>"gameover"</code> are different strings.</div>
         </div>
         <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
         <div class="solution" hidden>
@@ -578,10 +578,10 @@ return</code></pre>
                 <li><strong>game_over</strong>: ENTER switches to <code>"title"</code></li>
             </ul>
         </div>
-        <div class="step-note">Why does game over go back to the title instead of straight into a new game? Now <code>reset_game()</code> is called in exactly <em>one</em> place: when you leave the title screen. Every new game starts the same way, and the player gets a breather between rounds.</div>
+        <div class="step-note">Why does game over go back to the title instead of straight into a new game? Now <code>reset_game()</code> is called in exactly <em>one</em> place: when you leave the title screen. Every new game starts the same way, and you get a short break between rounds.</div>
         <div class="hints-container">
             <div class="hint" hidden>Start with the shape: <code>if state == "title" then</code> &hellip; <code>elseif state == "playing" then</code> &hellip; <code>elseif state == "paused" then</code> &hellip; <code>elseif state == "game_over" then</code> &hellip; <code>end</code>. Then fill in each branch.</div>
-            <div class="hint" hidden>The movement and firing code moves inside the <code>"playing"</code> branch. The old <code>if game_over then ... return end</code> block at the top isn't needed anymore &mdash; the chain does that job.</div>
+            <div class="hint" hidden>The movement and firing code moves inside the <code>"playing"</code> branch. The old <code>if game_over then ... return end</code> block at the top isn't needed anymore. The chain does that job.</div>
             <div class="hint" hidden>Use <code>is_key_pressed</code> (not <code>is_key_down</code>) for P and ENTER. Otherwise holding P for a moment would flip between paused and playing every frame!</div>
         </div>
         <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
@@ -633,11 +633,11 @@ end</code></pre>
     <!-- Task 3 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Update only what should move</div>
-        <div class="step-task">Move the star-moving loop out of <code>update()</code> into its own function, <code>move_stars(dt)</code>. Then change the top of <code>update()</code> so that on the title screen <em>only</em> the stars move, and when paused or game over <em>nothing</em> moves. The normal update code should only run while <code>"playing"</code>.</div>
+        <div class="step-task">Move the star-moving loop out of <code>update()</code> into its own function, <code>move_stars(dt)</code>, and call it where the loop used to be. Then change the top of <code>update()</code> so that on the title screen <em>only</em> the stars move, and when paused or game over <em>nothing</em> moves. The normal update code should only run while <code>"playing"</code>. The title screen needs the delta time to move the stars, so get it first, at the very top of the function.</div>
         <div class="hints-container">
-            <div class="hint" hidden>Put <code>move_stars</code> right after <code>init_stars()</code> so it's defined before <code>update()</code> uses it. It's the same loop as before, just wrapped in <code>local function move_stars(dt) ... end</code>.</div>
+            <div class="hint" hidden>Put <code>move_stars</code> right after <code>init_stars()</code> so it's defined before <code>update()</code> uses it. It's the same loop as before, wrapped in <code>local function move_stars(dt) ... end</code>.</div>
             <div class="hint" hidden>At the end of <code>update()</code>, the old star loop becomes one line: <code>move_stars(dt)</code>. At the top, replace <code>if game_over then return end</code> with two checks.</div>
-            <div class="hint" hidden>First: <code>if state == "title" then move_stars(dt) return end</code>. Second: <code>if state ~= "playing" then return end</code>. Remember <code>~=</code> means &ldquo;not equal&rdquo;. You need <code>dt</code> before both, so get it first.</div>
+            <div class="hint" hidden>First: <code>if state == "title" then move_stars(dt) return end</code>. Second: <code>if state ~= "playing" then return end</code>. <code>~=</code> means &ldquo;not equal&rdquo;. You need <code>dt</code> before both, so get it first.</div>
         </div>
         <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
         <div class="solution" hidden>
@@ -674,10 +674,10 @@ move_stars(dt)</code></pre>
     <!-- Task 4 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Draw the title screen</div>
-        <div class="step-task">Write a <code>draw_title()</code> function (above <code>draw()</code>) that shows <code>"SPACE SHOOTER"</code> centered in the <code>"future"</code> font, with <code>"Press ENTER to start"</code> and the controls underneath in the normal font. In <code>draw()</code>, right after the stars, call <code>draw_title()</code> and <code>return</code> when the state is <code>"title"</code> &mdash; so the title screen shows only stars and text, no ship or HUD.</div>
+        <div class="step-task">Write a <code>draw_title()</code> function (above <code>draw()</code>) that shows <code>"SPACE SHOOTER"</code> centered in the <code>"future"</code> font, with <code>"Press ENTER to start"</code> and the controls underneath in the normal font. In <code>draw()</code>, right after the stars, call <code>draw_title()</code> and <code>return</code> when the state is <code>"title"</code>. That way the title screen shows only stars and text, with no ship or HUD. Also add P: Pause to the end of the controls text in your HUD.</div>
         <div class="hints-container">
             <div class="hint" hidden>Center text the same way as the GAME OVER text: measure it with <code>canvas.get_text_width()</code>, then draw at <code>(SCREEN_W - width) / 2</code>. Set the font family and size <em>before</em> measuring, because they change the width.</div>
-            <div class="hint" hidden>Call <code>canvas.set_font_family("future")</code> before the title, then <code>canvas.set_font_family("monospace")</code> before the rest. If you forget to switch back, your HUD will be in the sci-fi font too!</div>
+            <div class="hint" hidden>Call <code>canvas.set_font_family("future")</code> before the title, then <code>canvas.set_font_family("monospace")</code> before the rest. If you don't switch back, your HUD will be in the sci-fi font too.</div>
             <div class="hint" hidden>Try font size 48 for the title at <code>y = 200</code>, size 24 for the start text at <code>y = 320</code>, and size 16 for the controls at <code>y = 370</code>. Add <code>| P: Pause</code> to the controls text in the HUD too.</div>
         </div>
         <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
@@ -719,8 +719,8 @@ end</code></pre>
     <!-- Task 5 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 5: Pause and game over overlays</div>
-        <div class="step-task">Write a <code>draw_paused()</code> function that covers the screen with a see-through dark rectangle and shows <code>"PAUSED"</code> and <code>"Press P to resume"</code> in the middle. Call it at the end of <code>draw()</code> when the state is <code>"paused"</code>. Then fix the game over overlay to check <code>state</code>, and change its prompt to <code>"Press ENTER to continue"</code> (it goes to the title now, not straight to a new game).</div>
-        <div class="step-note">The pause overlay is drawn <em>on top of</em> the ship, meteors, and lasers. Because <code>update()</code> isn't moving anything, they sit frozen behind the overlay &mdash; exactly how a pause screen should look.</div>
+        <div class="step-task">Write a <code>draw_paused()</code> function that covers the screen with a see-through dark rectangle and shows <code>"PAUSED"</code> and <code>"Press P to resume"</code> in the middle. Call it at the end of <code>draw()</code> when the state is <code>"paused"</code>. Then fix the game over overlay to check <code>state</code>. Change its prompt to <code>"Press ENTER to continue"</code>, because ENTER now goes to the title, not straight to a new game.</div>
+        <div class="step-note">The pause overlay is drawn <em>on top of</em> the ship, meteors, and lasers. Because <code>update()</code> isn't moving anything, they stay frozen behind the overlay, the way a pause screen should look.</div>
         <div class="hints-container">
             <div class="hint" hidden>Copy the shape of the game over overlay: a dark <code>fill_rect</code> over the whole screen, then two lines of centered text. Use a lower alpha (like <code>120</code>) so you can see the frozen game behind it.</div>
             <div class="hint" hidden>At the bottom of <code>draw()</code>, add <code>if state == "paused" then draw_paused() end</code>, and change <code>if game_over then</code> to <code>if state == "game_over" then</code>.</div>
@@ -776,7 +776,7 @@ end</code></pre>
     <div class="stretch">
         <h2>Going Further</h2>
         <ul>
-            <li>Make <strong>Press ENTER to start</strong> blink. (Hint: <code>math.floor(canvas.get_time() * 2) % 2 == 0</code> is <code>true</code> for half of every second.)</li>
+            <li>Make <strong>Press ENTER to start</strong> blink. (Hint: <code>math.floor(canvas.get_time() * 2) % 2 == 0</code> is <code>true</code> for half of every second. It counts half-seconds as whole numbers, and the remainder after dividing by 2 switches between 0 and 1.)</li>
             <li>Use the <code>"future"</code> font for <strong>GAME OVER</strong> and <strong>PAUSED</strong> too. Remember to switch back!</li>
             <li>Add a fifth state, <code>"get_ready"</code>, that shows <strong>GET READY!</strong> for 2 seconds before <code>"playing"</code> begins. Which branches of your <code>if</code>/<code>elseif</code> chains need a new <code>elseif</code>?</li>
         </ul>

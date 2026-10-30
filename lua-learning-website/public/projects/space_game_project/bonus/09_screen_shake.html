@@ -525,9 +525,9 @@ pre.code-block code {
     <div class="concepts">
         <h2>New Concepts</h2>
         <ul>
-            <li><strong>Screen shake</strong> &mdash; for a split second, draw the whole game world a few pixels off in a random direction. Each frame picks a new direction, so it looks like the screen is shaking.</li>
-            <li><code>canvas.translate(dx, dy)</code> &mdash; moves everything drawn after it by <code>dx</code> pixels right and <code>dy</code> pixels down. You don't have to change any of your <code>x</code> and <code>y</code> values.</li>
-            <li><code>canvas.save()</code> and <code>canvas.restore()</code> &mdash; <code>save</code> remembers the canvas as it is now; <code>restore</code> undoes every <code>translate</code> since then. Every <code>save</code> needs a matching <code>restore</code>.</li>
+            <li><strong>Screen shake</strong> means drawing the whole game world a few pixels off in a random direction for a moment. Each frame picks a new direction, so it looks like the screen is shaking.</li>
+            <li><code>canvas.translate(dx, dy)</code> moves everything drawn after it by <code>dx</code> pixels right and <code>dy</code> pixels down. You don't have to change any of your <code>x</code> and <code>y</code> values.</li>
+            <li><code>canvas.save()</code> and <code>canvas.restore()</code> work as a pair. <code>save</code> remembers the canvas as it is now, and <code>restore</code> puts it back the way it was at the matching <code>save</code>. Every <code>save</code> needs a matching <code>restore</code>. Pairs can sit inside other pairs. If you did Bonus 5: Meteor Variety, each spinning meteor has its own pair inside the shake's pair. Its <code>restore</code> only undoes that meteor's spin, not the shake.</li>
             <li><code>math.random()</code> with <strong>no arguments</strong> gives a decimal between <code>0</code> and <code>1</code>. So <code>math.random() * 2 - 1</code> gives a decimal between <code>-1</code> and <code>1</code>.</li>
         </ul>
     </div>
@@ -535,11 +535,11 @@ pre.code-block code {
     <!-- Task 1 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Shake variables and a start_shake function</div>
-        <div class="step-task">In GAME STATE, add three variables that all start at <code>0</code>: <code>shake_time</code> (seconds of shaking left), <code>shake_length</code> (how long the current shake lasts in total) and <code>shake_strength</code> (how many pixels the screen can move). Then write a function <code>start_shake(strength, length)</code> that sets <code>shake_strength</code> to <code>strength</code>, and sets both <code>shake_length</code> and <code>shake_time</code> to <code>length</code>.</div>
+        <div class="step-task">In GAME STATE, add three variables that all start at <code>0</code>: <code>shake_time</code> (seconds of shaking left), <code>shake_length</code> (how long the current shake lasts in total) and <code>shake_strength</code> (how many pixels the screen can move). Then write a function <code>start_shake(strength, length)</code> that sets <code>shake_strength</code> to <code>strength</code>, and sets both <code>shake_length</code> and <code>shake_time</code> to <code>length</code>. Put it in its own section above SPAWN METEOR.</div>
         <div class="step-note">You won't need <code>shake_length</code> until Task 5, where it lets the shake fade out smoothly.</div>
         <div class="hints-container">
             <div class="hint" hidden>Put the function in its own section above <code>spawn_meteor()</code>, so the collision code in <code>update()</code> can call it.</div>
-            <div class="hint" hidden>The function body is just three lines: <code>shake_strength = strength</code>, <code>shake_length = length</code>, <code>shake_time = length</code>.</div>
+            <div class="hint" hidden>The function body is three lines: <code>shake_strength = strength</code>, <code>shake_length = length</code>, <code>shake_time = length</code>.</div>
         </div>
         <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
         <div class="solution" hidden>
@@ -564,7 +564,7 @@ end</code></pre>
     <!-- Task 2 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Start shakes when things explode</div>
-        <div class="step-task">Call <code>start_shake</code> in two places: a small, quick shake (<code>4</code> pixels for <code>0.15</code> seconds) when a laser destroys a meteor, and a big, longer shake (<code>12</code> pixels for <code>0.5</code> seconds) when the ship crashes.</div>
+        <div class="step-task">Call <code>start_shake</code> in two places. When a laser destroys a meteor, start a small, quick shake (<code>4</code> pixels for <code>0.15</code> seconds). When the ship crashes, start a big, longer shake (<code>12</code> pixels for <code>0.5</code> seconds).</div>
         <div class="hints-container">
             <div class="hint" hidden>Look in <code>update()</code> for the line that adds to the score, and the line that sets <code>game_over = true</code>.</div>
             <div class="hint" hidden>Add <code>start_shake(4, 0.15)</code> after <code>score = score + 1</code> (before the <code>break</code>), and <code>start_shake(12, 0.5)</code> after <code>game_over = true</code> (before the <code>return</code>).</div>
@@ -588,7 +588,7 @@ return</code></pre>
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Count the shake down</div>
         <div class="step-task">In <code>update()</code>, subtract <code>dt</code> from <code>shake_time</code> every frame (never going below 0). It must keep counting down even after the game is over. Also make <code>reset_game()</code> set <code>shake_time</code> back to <code>0</code>.</div>
-        <div class="step-note">Watch out: the very first line of <code>update()</code> is <code>if game_over then return end</code>. Once the ship crashes, nothing below that line runs any more. If your countdown is below it, the big crash shake would start&hellip; and never stop!</div>
+        <div class="step-note">Watch out: the very first line of <code>update()</code> is <code>if game_over then return end</code>. Once the ship crashes, nothing below that line runs any more. (If you did Bonus 7: Explosion Particles, your <code>dt</code> line is already at the top. If you did Bonus 10: Game States, put the countdown above your state checks.) If your countdown is below it, the big crash shake would start and never stop.</div>
         <div class="hints-container">
             <div class="hint" hidden>The countdown needs to go <em>above</em> the <code>game_over</code> check. But it uses <code>dt</code>, so the <code>local dt = canvas.get_delta()</code> line has to move up too.</div>
             <div class="hint" hidden>Move <code>local dt = canvas.get_delta()</code> to the top of <code>update()</code>. Then add <code>shake_time = math.max(0, shake_time - dt)</code>. Then the <code>if game_over then return end</code> line.</div>
@@ -615,7 +615,7 @@ shake_time = 0</code></pre>
     <!-- Task 4 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Shake the world, not the HUD</div>
-        <div class="step-task">In <code>draw()</code>, right after the dark background, call <code>canvas.save()</code>. If <code>shake_time</code> is above 0, pick a random <code>dx</code> and <code>dy</code> between <code>-shake_strength</code> and <code>shake_strength</code> and call <code>canvas.translate(dx, dy)</code>. Then, right after drawing the ship (before the HUD), call <code>canvas.restore()</code>.</div>
+        <div class="step-task">In <code>draw()</code>, right after the dark background, call <code>canvas.save()</code>. If <code>shake_time</code> is above 0, pick a random <code>dx</code> and <code>dy</code> between <code>-shake_strength</code> and <code>shake_strength</code> and call <code>canvas.translate(dx, dy)</code>. Then, right after drawing the ship (before the HUD), call <code>canvas.restore()</code>. If you did Bonus 7: Explosion Particles, draw the particles before the <code>restore</code> too, so they shake with the rest of the world.</div>
         <div class="step-note">Why not shake everything? The stars, lasers, meteors and ship are <em>in</em> the world, so they should jolt. The score and the game over text are like a sticker on the glass of your screen. If they shake, they're hard to read, and it looks like the whole TV is broken. The background stays still too: it already fills the whole screen, and moving it would show black gaps at the edges.</div>
         <div class="hints-container">
             <div class="hint" hidden><code>math.random() * 2 - 1</code> is between -1 and 1. Multiply that by <code>shake_strength</code>.</div>
@@ -643,7 +643,7 @@ canvas.restore()</code></pre>
     <!-- Task 5 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 5: Fade the shake out</div>
-        <div class="step-task">Right now the shake is full strength until it stops dead. Make it fade instead: full strength when the shake starts, getting smaller as <code>shake_time</code> runs out, and reaching 0 right at the end.</div>
+        <div class="step-task">Right now the shake stays at full strength until it suddenly stops. Make it fade instead: full strength when the shake starts, getting smaller as <code>shake_time</code> runs out, and reaching 0 right at the end.</div>
         <div class="hints-container">
             <div class="hint" hidden><code>shake_time / shake_length</code> is the <strong>fraction</strong> of the shake left. It's <code>1</code> when the shake starts, <code>0.5</code> halfway through, and <code>0</code> at the end.</div>
             <div class="hint" hidden>Make a local <code>power = shake_strength * shake_time / shake_length</code> and use <code>power</code> instead of <code>shake_strength</code> when you pick <code>dx</code> and <code>dy</code>.</div>

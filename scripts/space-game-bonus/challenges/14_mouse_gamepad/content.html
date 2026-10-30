@@ -1,21 +1,22 @@
     <div class="concepts">
         <h2>New Concepts</h2>
         <ul>
-            <li><strong>Input is just numbers</strong> &mdash; the ship doesn't care <em>what</em> moved it. Keyboard, mouse, and gamepad code can all change the same <code>ship_x</code> and <code>ship_y</code>. The clamping in <code>update()</code> keeps the ship on screen no matter which device moved it.</li>
-            <li><strong>Mouse</strong> &mdash; <code>canvas.get_mouse_x()</code> and <code>canvas.get_mouse_y()</code> give the pointer's position. <code>canvas.is_mouse_down(0)</code> is true while the left button is held; <code>canvas.is_mouse_pressed(0)</code> is true only on the frame it was clicked. (<code>0</code> means the left button.)</li>
-            <li><strong>Gamepad</strong> &mdash; <code>canvas.is_gamepad_connected(1)</code> checks for gamepad number 1. <code>canvas.get_gamepad_axis(1, canvas.axes.LEFT_STICK_X)</code> gives a number from <code>-1</code> (full left) to <code>1</code> (full right). <code>LEFT_STICK_Y</code> is <code>-1</code> for up and <code>1</code> for down &mdash; the same direction as screen <code>y</code>. <code>canvas.is_gamepad_button_pressed(1, canvas.buttons.SOUTH)</code> works like <code>is_key_pressed</code>. <code>SOUTH</code> is the bottom face button: <strong>A</strong> on Xbox, <strong>&#x2715;</strong> on PlayStation.</li>
-            <li><strong>Dead zone</strong> &mdash; a real stick never rests at exactly <code>0</code>. It might sit at <code>0.03</code> or <code>-0.07</code>, which would make your ship slowly drift. Ignoring small values (under <code>0.2</code>) fixes that.</li>
-            <li><code>math.abs(x)</code> &mdash; the size of a number without its sign. <code>math.abs(-0.5)</code> is <code>0.5</code>.</li>
+            <li><strong>Input is numbers:</strong> the ship doesn't care <em>what</em> moved it. Keyboard, mouse, and gamepad code can all change the same <code>ship_x</code> and <code>ship_y</code>. The clamping in <code>update()</code> keeps the ship on screen no matter which device moved it.</li>
+            <li><strong>Mouse:</strong> <code>canvas.get_mouse_x()</code> and <code>canvas.get_mouse_y()</code> give the pointer's position. <code>canvas.is_mouse_down(0)</code> is true while the left button is held; <code>canvas.is_mouse_pressed(0)</code> is true only on the frame it was clicked. (<code>0</code> means the left button.)</li>
+            <li><strong>Gamepad:</strong> <code>canvas.is_gamepad_connected(1)</code> checks for gamepad number 1. <code>canvas.get_gamepad_axis(1, canvas.axes.LEFT_STICK_X)</code> gives a number from <code>-1</code> (full left) to <code>1</code> (full right). <code>LEFT_STICK_Y</code> is <code>-1</code> for up and <code>1</code> for down, the same direction as screen <code>y</code>. <code>canvas.is_gamepad_button_pressed(1, canvas.buttons.SOUTH)</code> works like <code>is_key_pressed</code>. <code>SOUTH</code> is the bottom face button: <strong>A</strong> on Xbox, <strong>&#x2715;</strong> on PlayStation.</li>
+            <li><strong>Dead zone:</strong> a real stick never rests at exactly <code>0</code>. It might sit at <code>0.03</code> or <code>-0.07</code>, which would make your ship slowly drift. Ignoring small values (under <code>0.2</code>) fixes that.</li>
+            <li><code>math.abs(x)</code> gives the size of a number without its sign. <code>math.abs(-0.5)</code> is <code>0.5</code>.</li>
         </ul>
     </div>
 
     <!-- Task 1 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Fly toward the mouse</div>
-        <div class="step-task">While the left mouse button is held down, move the ship so its <em>center</em> heads toward the mouse pointer. It should glide there at <code>ship_speed</code>, not jump there instantly. Write a helper function <code>move_toward(current, target, max_step)</code> that returns <code>current</code> moved toward <code>target</code> by at most <code>max_step</code>, and use it for both <code>ship_x</code> and <code>ship_y</code>.</div>
-        <div class="step-note">Why only while the button is held? The mouse is always <em>somewhere</em>. If the ship always chased it, the mouse would fight the keyboard &mdash; press LEFT and the ship would get pulled straight back to the pointer. Holding the button says &ldquo;I'm using the mouse now.&rdquo; And why glide instead of jumping? With the speed limit, the mouse is exactly as fast as the keyboard, so it isn't a cheat. A ship that can teleport could dodge anything!</div>
+        <div class="step-task">While the left mouse button is held down, move the ship so its <em>center</em> heads toward the mouse pointer. It should glide there at <code>ship_speed</code>, not jump there instantly. Write a helper function <code>move_toward(current, target, max_step)</code> that returns <code>current</code> moved toward <code>target</code> by at most <code>max_step</code>, and use it for both <code>ship_x</code> and <code>ship_y</code>. Save the position the ship is heading for in <code>target_x</code> and <code>target_y</code>. Put <code>move_toward</code> above <code>user_input()</code>, and the mouse code after the arrow-key movement. If your ship jumps straight to the pointer, check that each move goes through the helper function instead of setting the position to the target.</div>
+        <div class="step-note">If you did Bonus 8: Power-Ups, use the same speed your arrow keys use (your <code>speed</code> variable) here and in Task 2, instead of <code>ship_speed</code>. Then the speed boost works with every device.</div>
+        <div class="step-note">The button has to be held because the mouse is always <em>somewhere</em>. If the ship always chased it, the mouse would fight the keyboard. Press LEFT and the ship would get pulled straight back to the pointer. Holding the button says &ldquo;I'm using the mouse now.&rdquo; Gliding matters too. With the speed limit, the mouse is exactly as fast as the keyboard, so it isn't a cheat. A ship that can teleport could dodge anything!</div>
         <div class="hints-container">
-            <div class="hint" hidden>In <code>move_toward</code>: if <code>current</code> is less than <code>target</code>, add <code>max_step</code>; otherwise subtract it. But don't overshoot! <code>math.min(current + max_step, target)</code> stops at the target.</div>
+            <div class="hint" hidden>In <code>move_toward</code>: if <code>current</code> is less than <code>target</code>, add <code>max_step</code>; otherwise subtract it. But don't overshoot, or the ship will wobble back and forth around the pointer. <code>math.min(current + max_step, target)</code> picks the smaller of the two numbers, so it stops at the target.</div>
             <div class="hint" hidden>The ship's position is its top-left corner. To put its center on the pointer, the target is <code>canvas.get_mouse_x() - ship_w / 2</code> (and the same for y with <code>ship_h</code>).</div>
             <div class="hint" hidden>Put <code>move_toward</code> above <code>user_input()</code>. Then, after the arrow-key movement, add <code>if canvas.is_mouse_down(0) then ... end</code> and inside it call <code>ship_x = move_toward(ship_x, target_x, ship_speed * dt)</code>, and the same for <code>ship_y</code>.</div>
         </div>
@@ -45,12 +46,12 @@ end</code></pre>
     <!-- Task 2 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Gamepad stick</div>
-        <div class="step-task">At the top of <code>user_input()</code>, store whether gamepad 1 is connected in a variable <code>has_pad</code>. If it is, move the ship with the left stick: the stick value times <code>ship_speed * dt</code>. Add a <code>DEAD_ZONE</code> constant of <code>0.2</code> next to <code>ship_speed</code>, and ignore any stick value smaller than that (in either direction).</div>
+        <div class="step-task">At the top of <code>user_input()</code>, store whether gamepad 1 is connected in a variable <code>has_pad</code>. If it is, read the left stick into <code>stick_x</code> and <code>stick_y</code>, and move the ship by the stick value times <code>ship_speed * dt</code>. Add a <code>DEAD_ZONE</code> constant of <code>0.2</code> next to <code>ship_speed</code>, and ignore any stick value smaller than that (in either direction). Put the stick code after the mouse movement.</div>
         <div class="step-note">Multiplying by the stick value gives you something the keyboard can't: <strong>analog</strong> control. Push the stick halfway and the ship flies at half speed.</div>
         <div class="hints-container">
-            <div class="hint" hidden>Compare to the arrow keys: <code>ship_x = ship_x + ship_speed * dt</code>. For the stick, multiply by <code>stick_x</code> as well. A negative value moves left automatically &mdash; no separate LEFT check needed.</div>
+            <div class="hint" hidden>Compare to the arrow keys: <code>ship_x = ship_x + ship_speed * dt</code>. For the stick, multiply by <code>stick_x</code> as well. A negative value moves left on its own, so you don't need a separate LEFT check.</div>
             <div class="hint" hidden>The stick can be pushed left (negative) or right (positive). <code>math.abs(stick_x) &gt; DEAD_ZONE</code> checks both directions at once.</div>
-            <div class="hint" hidden>Inside <code>if has_pad then ... end</code>, read <code>stick_x</code> with <code>canvas.get_gamepad_axis(1, canvas.axes.LEFT_STICK_X)</code> and <code>stick_y</code> with <code>LEFT_STICK_Y</code>. Then one <code>if</code> line for each, just like the arrow keys.</div>
+            <div class="hint" hidden>Inside <code>if has_pad then ... end</code>, read <code>stick_x</code> with <code>canvas.get_gamepad_axis(1, canvas.axes.LEFT_STICK_X)</code> and <code>stick_y</code> with <code>LEFT_STICK_Y</code>. Then one <code>if</code> line for each, the same way as the arrow keys.</div>
         </div>
         <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
         <div class="solution" hidden>
@@ -77,9 +78,10 @@ end</code></pre>
     <!-- Task 3 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Fire from any device</div>
-        <div class="step-task">Make the ship fire when SPACE is pressed, <em>or</em> the left mouse button is clicked, <em>or</em> the gamepad's <code>SOUTH</code> button is pressed. Keep a single <code>spawn_laser(...)</code> call.</div>
+        <div class="step-task">Make the ship fire when SPACE is pressed, <em>or</em> the left mouse button is clicked, <em>or</em> the gamepad's <code>SOUTH</code> button is pressed. Replace your SPACE check with a <code>fire</code> variable, and put your firing code inside one <code>if fire then ... end</code> block, so every device fires the same way.</div>
+        <div class="step-note">Other bonus challenges may have changed what firing does, such as triple shot from Bonus 8: Power-Ups or the laser sound from Bonus 13: Sound Effects. Keep all of that code inside the <code>if fire then</code> block. Only the check at the top changes.</div>
         <div class="hints-container">
-            <div class="hint" hidden>Make a variable <code>fire</code> that is <code>true</code> if any device asked to shoot. Then <code>if fire then spawn_laser(...) end</code>.</div>
+            <div class="hint" hidden>Make a variable <code>fire</code> that is <code>true</code> if any device asked to shoot. Then move your firing code inside <code>if fire then ... end</code>.</div>
             <div class="hint" hidden>You can join checks with <code>or</code>: <code>local fire = canvas.is_key_pressed(canvas.keys.SPACE) or canvas.is_mouse_pressed(0)</code>. Use <code>is_mouse_pressed</code>, not <code>is_mouse_down</code>, or holding the button would fire every frame.</div>
             <div class="hint" hidden>Only ask about the gamepad button if there is a gamepad: <code>if has_pad and canvas.is_gamepad_button_pressed(1, canvas.buttons.SOUTH) then fire = true end</code>.</div>
         </div>
@@ -100,10 +102,10 @@ end</code></pre>
     <!-- Task 4 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: START to restart, and update the text</div>
-        <div class="step-task">On the game over screen, pressing <code>START</code> on the gamepad should restart the game, just like ENTER. Change the restart prompt to <code>"Press ENTER or START to restart"</code>, and update the controls line in the HUD to mention the new controls.</div>
+        <div class="step-task">On the game over screen, pressing <code>START</code> on the gamepad should restart the game, the same way ENTER does. If you did Bonus 10: Game States, add it to the ENTER checks on both the title screen and the game over screen. Otherwise a player with only a gamepad gets stuck on the title screen. Change the restart prompt to <code>"Press ENTER or START to restart"</code>, and update the controls line in the HUD to mention the new controls, so a player holding a gamepad knows what to press. Keep any controls other bonus challenges added.</div>
         <div class="hints-container">
             <div class="hint" hidden>Add an <code>or</code> to the ENTER check inside <code>if game_over then</code>. Use <code>canvas.buttons.START</code>.</div>
-            <div class="hint" hidden>Wrap the gamepad part in parentheses so it reads clearly: <code>or (has_pad and canvas.is_gamepad_button_pressed(1, canvas.buttons.START))</code>. This is why <code>has_pad</code> needs to be set at the very top of <code>user_input()</code>, before the game over check.</div>
+            <div class="hint" hidden>Wrap the gamepad part in parentheses so it's easier to read: <code>or (has_pad and canvas.is_gamepad_button_pressed(1, canvas.buttons.START))</code>. Setting <code>has_pad</code> at the very top of <code>user_input()</code>, before the game over check, is what lets this work.</div>
         </div>
         <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
         <div class="solution" hidden>
@@ -133,7 +135,7 @@ local restart_text = "Press ENTER or START to restart"</code></pre>
             <li>Holding the left mouse button makes the ship glide toward the pointer and stop with its center on it</li>
             <li>Letting go of the mouse button leaves the ship where it is, and the arrow keys take over</li>
             <li>Every mouse click fires a laser</li>
-            <li>With a gamepad plugged in (press a button on it first so the browser notices it), the left stick moves the ship: a little push is slow, a full push is fast, and letting go stops the ship with no drifting</li>
+            <li>With a gamepad plugged in, the left stick moves the ship. (Press a button on it first so the browser notices it.) A little push is slow, a full push is fast, and letting go stops the ship with no drifting</li>
             <li>The A / &#x2715; button fires, and START restarts after a game over</li>
         </ul>
     </div>
@@ -142,7 +144,7 @@ local restart_text = "Press ENTER or START to restart"</code></pre>
         <h2>Going Further</h2>
         <ul>
             <li>Let the gamepad's D-pad move the ship too. Use <code>canvas.get_gamepad_button(1, canvas.buttons.DPAD_LEFT)</code>, which is <code>1</code> while held and <code>0</code> when not.</li>
-            <li>Hold UP and RIGHT together and the ship flies about 1.4 times faster than with one key. The stick doesn't have this problem &mdash; a stick pushed diagonally only reads about <code>0.7</code> on each axis. Can you fix the keyboard?</li>
+            <li>Hold UP and RIGHT together and the ship flies about 1.4 times faster than with one key. The stick doesn't have this problem, because a stick pushed diagonally only reads about <code>0.7</code> on each axis. Try fixing the keyboard so diagonal moves are the same speed.</li>
             <li>Try a different mouse style: the ship follows the pointer <em>all the time</em>, but only after the mouse has moved. (Hint: remember last frame's mouse position and compare.) Which feels better?</li>
         </ul>
     </div>

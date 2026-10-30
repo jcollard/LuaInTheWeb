@@ -1,10 +1,10 @@
     <div class="concepts">
         <h2>New Concepts</h2>
         <ul>
-            <li><strong>Lives</strong> &mdash; instead of ending the game on the first hit, count hits down from 3. The game is over only when <code>lives</code> reaches 0.</li>
-            <li><strong>Invincibility timer</strong> &mdash; a countdown, just like the meteor <code>spawn_timer</code> but going down. While it's above 0, the ship can't be hit. Without it, one meteor could take all 3 lives in 3 frames!</li>
-            <li><strong>Blinking</strong> &mdash; skip drawing the ship on some frames. <code>math.floor(invincible_timer * 10)</code> goes up by 1 every 0.1 seconds, and <code>% 2</code> (remainder after dividing by 2) flips between <code>0</code> and <code>1</code>. Draw on 1, hide on 0.</li>
-            <li><strong>Drawing in a loop</strong> &mdash; <code>for i = 1, lives do</code> draws one icon per life, each one a bit further along.</li>
+            <li><strong>Lives</strong>: instead of ending the game on the first hit, count hits down from 3. The game is over only when <code>lives</code> reaches 0.</li>
+            <li><strong>Invincibility timer</strong>: a countdown, just like the meteor <code>spawn_timer</code> but going down. While it's above 0, the ship can't be hit. Without it, one meteor could take all 3 lives in 3 frames!</li>
+            <li><strong>Blinking</strong>: skip drawing the ship on some frames. <code>math.floor(invincible_timer * 10)</code> rounds down to a whole number that changes by 1 every 0.1 seconds, and <code>% 2</code> (remainder after dividing by 2) flips between <code>0</code> and <code>1</code>. Draw on 1, hide on 0.</li>
+            <li><strong>Drawing in a loop</strong>: <code>for i = 1, lives do</code> draws one icon per life, each one a little further to the left.</li>
         </ul>
     </div>
 
@@ -13,15 +13,15 @@
         <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Load the life icon</div>
         <div class="step-location">Where: GAME STATE section, with the other <code>load_image</code> lines</div>
         <pre class="code-block"><code class="lua">canvas.assets.load_image("life", "life.png")</code></pre>
-        <div class="step-desc">This loads a small ship icon (33 &times; 26 pixels) from the <code>images/</code> folder. We'll draw one for each life the player has left.</div>
+        <div class="step-desc">This loads a small ship icon (33 &times; 26 pixels) from the <code>images/</code> folder. We'll draw one for each life you have left.</div>
     </div>
 
     <!-- Task 1 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Add lives variables</div>
-        <div class="step-task">In the GAME STATE section, add a constant for the starting number of lives (<code>3</code>) and a <code>lives</code> variable that starts there. Also add a constant for how long invincibility lasts (<code>2.0</code> seconds) and an <code>invincible_timer</code> that starts at <code>0</code>.</div>
+        <div class="step-task">In the GAME STATE section, add a constant <code>START_LIVES</code> for the starting number of lives (<code>3</code>) and a <code>lives</code> variable that starts there. Also add a constant <code>INVINCIBLE_TIME</code> for how long invincibility lasts (<code>2.0</code> seconds) and an <code>invincible_timer</code> that starts at <code>0</code>.</div>
         <div class="hints-container">
-            <div class="hint" hidden>Constants use <code>ALL_CAPS</code>. Try <code>START_LIVES</code> and <code>INVINCIBLE_TIME</code>.</div>
+            <div class="hint" hidden>Constants use <code>ALL_CAPS</code>, which is why <code>START_LIVES</code> and <code>INVINCIBLE_TIME</code> are written that way.</div>
             <div class="hint" hidden>Four lines. Write <code>local lives = START_LIVES</code> so the number 3 only appears in one place.</div>
         </div>
         <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
@@ -39,11 +39,12 @@ local invincible_timer = 0</code></pre>
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Lose a life instead of losing the game</div>
         <div class="step-task">Change the ship vs meteor collision in <code>update()</code>. When the ship hits a meteor, remove that meteor and take away one life. Only set <code>game_over</code> when <code>lives</code> reaches 0.</div>
-        <div class="step-note">Removing an item inside an <code>ipairs</code> loop is usually a bad idea. It's safe here because we <code>break</code> out of the loop right after, so the loop never looks at the shifted list.</div>
+        <div class="step-note">Removing an item inside an <code>ipairs</code> loop is usually a bad idea. It's safe here because you <code>break</code> out of the loop right after, so the loop never looks at the shifted list.</div>
+        <div class="step-note">If you did Bonus 5: Meteor Variety, keep using <code>meteor.w</code> and <code>meteor.h</code> in the collision check. If you did Bonus 10: Game States, set <code>state = "game_over"</code> where these solutions set <code>game_over = true</code>.</div>
         <div class="hints-container">
-            <div class="hint" hidden>Why remove the meteor? If it stays, it's still touching the ship next frame and would hit you again.</div>
+            <div class="hint" hidden>The meteor has to go. If it stays, it's still touching the ship next frame and would hit you again.</div>
             <div class="hint" hidden>Inside the <code>if check_collision(...)</code>: <code>table.remove(meteors, i)</code>, then <code>lives = lives - 1</code>.</div>
-            <div class="hint" hidden>Then: <code>if lives &lt;= 0 then game_over = true return end</code>. If the game isn't over, <code>break</code> so we only lose one life per frame.</div>
+            <div class="hint" hidden>Then: <code>if lives &lt;= 0 then game_over = true return end</code>. If the game isn't over, <code>break</code> so you only lose one life per frame.</div>
         </div>
         <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
         <div class="solution" hidden>
@@ -66,10 +67,10 @@ end</code></pre>
     <!-- Task 3 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Add invincibility</div>
-        <div class="step-task">After losing a life (but not on game over), start the invincibility timer. Each frame, count it down by <code>dt</code> (never below 0). While it's above 0, skip the ship vs meteor collision check completely.</div>
+        <div class="step-task">After losing a life (but not on game over), start the invincibility timer. Count it down by <code>dt</code> each frame (never below 0), right before the ship vs meteor collision check in <code>update()</code>. While it's above 0, skip that check completely.</div>
         <div class="hints-container">
             <div class="hint" hidden>Set <code>invincible_timer = INVINCIBLE_TIME</code> right before the <code>break</code>.</div>
-            <div class="hint" hidden>Count down just before the collision check: <code>invincible_timer = math.max(0, invincible_timer - dt)</code>.</div>
+            <div class="hint" hidden>Count down right before the collision check: <code>invincible_timer = math.max(0, invincible_timer - dt)</code>.</div>
             <div class="hint" hidden>Wrap the whole collision <code>for</code> loop in <code>if invincible_timer &lt;= 0 then ... end</code>.</div>
         </div>
         <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
@@ -100,10 +101,10 @@ end</code></pre>
     <!-- Task 4 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Make the ship blink</div>
-        <div class="step-task">In <code>draw()</code>, while the ship is invincible, hide it every other 0.1 seconds so it blinks. When it's not invincible, always draw it.</div>
+        <div class="step-task">In <code>draw()</code>, change the line that draws the ship. While the ship is invincible, hide it every other 0.1 seconds so it blinks. When it's not invincible, always draw it.</div>
         <div class="hints-container">
             <div class="hint" hidden>Make a <code>local visible = true</code>, set it to <code>false</code> when the ship should be hidden, and only call <code>draw_image</code> if <code>visible</code>.</div>
-            <div class="hint" hidden>Try it by hand: at <code>invincible_timer = 1.53</code>, <code>math.floor(1.53 * 10)</code> is <code>15</code>, and <code>15 % 2</code> is <code>1</code>. At <code>1.47</code> you get <code>14 % 2 = 0</code>.</div>
+            <div class="hint" hidden>Try it by hand: at <code>invincible_timer = 1.53</code>, <code>math.floor(1.53 * 10)</code> is <code>15</code>, and <code>15 % 2</code> is <code>1</code>, so the ship is drawn. At <code>1.47</code> you get <code>14 % 2 = 0</code>, so the ship is hidden.</div>
             <div class="hint" hidden>Hide the ship when <code>invincible_timer &gt; 0 and math.floor(invincible_timer * 10) % 2 == 0</code>.</div>
         </div>
         <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
@@ -123,7 +124,7 @@ end</code></pre>
     <!-- Task 5 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 5: Show lives and reset them</div>
-        <div class="step-task">In the HUD, draw one <code>"life"</code> icon (33 &times; 26) for each life, lined up in the top-right corner. Then make <code>reset_game()</code> give back all the lives and turn off invincibility.</div>
+        <div class="step-task">In the HUD, draw one <code>"life"</code> icon (33 &times; 26) for each life, lined up 40 pixels apart in the top-right corner. Then make <code>reset_game()</code> give back all the lives and turn off invincibility.</div>
         <div class="hints-container">
             <div class="hint" hidden>Use <code>for i = 1, lives do</code>. Each icon needs a different x so they don't stack on top of each other.</div>
             <div class="hint" hidden>Space them 40 pixels apart from the right edge: <code>x = SCREEN_W - i * 40</code>. Use <code>y = 10</code>.</div>

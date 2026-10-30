@@ -13,17 +13,17 @@
     <!-- Task 1 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Pick an idea</div>
-        <div class="step-task">Pick one idea from the list below, or invent your own. Start small &mdash; you can always add more later.</div>
+        <div class="step-task">Pick one idea from the list below, or invent your own. Start small. You can always add more later.</div>
         <div class="step-note">
             <strong>Ideas:</strong>
             <ul style="padding-left: 22px; margin-top: 6px;">
-                <li><strong>Homing missile</strong> &mdash; press X to fire a slow missile that turns toward the nearest meteor.</li>
-                <li><strong>Combo multiplier</strong> &mdash; hitting meteors quickly in a row doubles, then triples, your points. Missing for 2 seconds resets it.</li>
-                <li><strong>Splitting meteors</strong> &mdash; big meteors break into two small ones that fly apart.</li>
-                <li><strong>Bomb</strong> &mdash; press B to destroy everything on screen. You only get 3 per game.</li>
-                <li><strong>Coins and a shop</strong> &mdash; destroyed meteors drop coins. Between games, spend them on upgrades.</li>
-                <li><strong>Two players</strong> &mdash; a second ship controlled with WASD and F to fire.</li>
-                <li><strong>Black hole</strong> &mdash; a black hole drifts across the screen and pulls the ship and meteors toward it.</li>
+                <li><strong>Homing missile:</strong> press X to fire a slow missile that turns toward the nearest meteor.</li>
+                <li><strong>Combo multiplier:</strong> each hit within 2 seconds of the last one raises a multiplier from x1 to x2 to x3 (the most). Your points are multiplied by it. Two seconds with no hit puts it back to x1.</li>
+                <li><strong>Splitting meteors:</strong> big meteors break into two small ones that fly apart.</li>
+                <li><strong>Bomb:</strong> press B to destroy everything on screen. You only get 3 per game.</li>
+                <li><strong>Coins and a shop:</strong> destroyed meteors drop coins. Between games, spend them on upgrades.</li>
+                <li><strong>Two players:</strong> a second ship that moves with WASD and fires with F.</li>
+                <li><strong>Black hole:</strong> a black hole drifts across the screen and pulls the ship and meteors toward it.</li>
             </ul>
         </div>
         <div class="hints-container">
@@ -35,7 +35,7 @@
 
     <!-- Task 2 -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Plan it on paper</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Write a plan</div>
         <div class="step-task">Before writing code, answer the four questions from the top of this page for your idea. Write the answers as comments at the top of <code>game.lua</code>.</div>
         <div class="hints-container">
             <div class="hint" hidden>Here's a plan for the bomb idea:
@@ -52,21 +52,22 @@
     <!-- Task 3 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Build it one piece at a time</div>
-        <div class="step-task">Build your feature in small steps, running the game after each one: data first, then drawing (so you can see it), then the logic that changes it, and finally the reset.</div>
+        <div class="step-task">Build your feature in small steps, and run the game after each one. Add the data first, then the drawing (so you can see it), then the code that changes it, and finally the reset.</div>
         <div class="hints-container">
-            <div class="hint" hidden>Drawing early is a debugging trick: if you can <em>see</em> your new data on screen (even just as text in the HUD), it's much easier to tell when the logic is wrong.</div>
-            <div class="hint" hidden>Stuck on an error? Read the line number in the error message, then look at that line and the line above it. Missing <code>end</code>s and misspelled variable names are the most common causes.</div>
-            <div class="hint" hidden>Look back at a bonus challenge that used a similar pattern. Splitting meteors works a lot like Explosion Particles. A homing missile uses the same <code>math.cos</code>/<code>math.sin</code> idea. Combos are timers, like Fire Cooldown.</div>
+            <div class="hint" hidden>Drawing early helps you find bugs. If you can <em>see</em> your new data on screen (even as plain text in the HUD), it's much easier to tell when the code that changes it is wrong.</div>
+            <div class="hint" hidden>Stuck on an error? That's normal when you build something new. Read the line number in the error message, then look at that line and the line above it. Missing <code>end</code>s and misspelled variable names are the most common causes.</div>
+            <div class="hint" hidden>Look back at a bonus challenge that used a similar pattern. Splitting meteors works a lot like Bonus 7: Explosion Particles. A homing missile uses the same <code>math.cos</code>/<code>math.sin</code> idea from that challenge. Combos are timers, like Bonus 2: Fire Cooldown &amp; Auto-Fire: count <code>combo_timer</code> down by <code>dt</code> each frame, and reset the combo when it reaches 0.</div>
+            <div class="hint" hidden>If your feature changes what happens when you score, like a combo multiplier, find every line that adds to <code>score</code>. If you did other bonus challenges, there may be several (meteors, enemies, a boss). Write one function, such as <code>add_points(n)</code>, and call it in all of those places. Then your change only has to go in one spot.</div>
         </div>
-        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <button class="btn-hint" data-total="4">Show Hint (1/4)</button>
     </div>
 
     <!-- Task 4 -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Playtest and tune</div>
-        <div class="step-task">Play your game five times. After each game, change one number (a speed, a timer, a cost) to make it more fun. Then ask someone else to play it without telling them how it works &mdash; can they figure it out?</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Playtest and adjust</div>
+        <div class="step-task">Play your game five times. After each game, change one number (a speed, a timer, a cost) to make it more fun. Then ask someone else to play it without telling them how it works, and watch whether they can figure it out.</div>
         <div class="hints-container">
-            <div class="hint" hidden>If a number is hard to tune, give it a name in <code>ALL_CAPS</code> at the top of the file (like <code>BOMB_COUNT = 3</code>) so it's easy to find and change.</div>
+            <div class="hint" hidden>If you keep changing the same number, give it a name in <code>ALL_CAPS</code> at the top of the file (like <code>BOMB_COUNT = 3</code>). Then it's in one place where you can find and change it.</div>
             <div class="hint" hidden>If your playtester gets confused, add a line to the HUD or the title screen explaining the new key or rule.</div>
         </div>
         <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
@@ -82,14 +83,14 @@
             <li>The rest of the game still works: moving, shooting, scoring, and game over</li>
             <li>Someone else can play it and understand it</li>
         </ul>
-        <p style="margin-top: 12px; color: #4caf50; font-weight: 600;">There's no reference solution for this one &mdash; it's your game now.</p>
+        <p style="margin-top: 12px; color: #4caf50; font-weight: 600;">There's no reference solution for this one. It's your game now.</p>
     </div>
 
     <div class="stretch">
         <h2>Going Further</h2>
         <ul>
             <li>Combine several bonus challenges into one game. Which features work well together?</li>
-            <li>Give your game a new name and title screen, and change the ship's color (there are more ships in Kenney's free Space Shooter pack at kenney.nl).</li>
+            <li>Give your game a new name and title screen, and change the ship's color. Kenney's free Space Shooter pack at kenney.nl has more ships to choose from.</li>
             <li>Make a second game from scratch using the same patterns: a dodging game, a falling-object catcher, or a top-down racer.</li>
         </ul>
     </div>

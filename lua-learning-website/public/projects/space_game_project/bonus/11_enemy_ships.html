@@ -525,18 +525,19 @@ pre.code-block code {
     <div class="concepts">
         <h2>New Concepts</h2>
         <ul>
-            <li><strong>Patterns you already know, combined</strong> &mdash; enemies are spawned and moved just like <code>meteors</code>, and their shots work just like your <code>lasers</code> (only moving down). Most of this challenge is reusing code you've already written.</li>
-            <li><strong>Each enemy has its own data</strong> &mdash; an enemy table can hold more than <code>x</code> and <code>y</code>: its own health (<code>hp</code>), its own age (<code>t</code>), and its own <code>fire_timer</code>.</li>
-            <li><code>math.sin(t)</code> &mdash; gives a number that smoothly swings back and forth between <code>-1</code> and <code>1</code> as <code>t</code> grows. Multiply it by <code>80</code> and it swings between <code>-80</code> and <code>80</code>. Add that to a starting x and you get a ship that sways left and right.</li>
-            <li><strong>Countdown timers</strong> &mdash; instead of counting up to an interval, start a timer at a random number of seconds and subtract <code>dt</code>. When it reaches <code>0</code>, act and pick a new random time. That way every enemy fires on its own schedule.</li>
+            <li><strong>Patterns you already know, combined</strong>: enemies are spawned and moved like <code>meteors</code>, and their shots work like your <code>lasers</code> (only moving down). A lot of this challenge reuses code you've already written, put together in new ways.</li>
+            <li><strong>Each enemy has its own data</strong>: an enemy table can hold more than <code>x</code> and <code>y</code>. Each enemy also gets its own health (<code>hp</code>), its own age (<code>t</code>), and its own <code>fire_timer</code>.</li>
+            <li><code>math.sin(t)</code> gives a number that smoothly swings back and forth between <code>-1</code> and <code>1</code> as <code>t</code> grows. Multiply it by <code>80</code> and it swings between <code>-80</code> and <code>80</code>. Add that to a starting x and you get a ship that sways left and right.</li>
+            <li><strong>Countdown timers</strong>: instead of counting up to an interval, start a timer at a random number of seconds and subtract <code>dt</code>. When it reaches <code>0</code>, act and pick a new random time. That way every enemy fires on its own schedule.</li>
+            <li><code>math.random(10, 20) / 10</code> gives a random decimal between <code>1.0</code> and <code>2.0</code>. <code>math.random</code> with two numbers only gives whole numbers, so pick a whole number from <code>10</code> to <code>20</code> and divide it by <code>10</code>.</li>
         </ul>
     </div>
 
     <!-- Task 1 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Load the images and add enemy variables</div>
-        <div class="step-task">Load <code>enemy.png</code> as <code>"enemy"</code> and <code>enemy_laser.png</code> as <code>"enemy_laser"</code>. Then add variables for the enemies: an empty <code>enemies</code> list, a size of <code>60</code> by <code>54</code>, a falling speed of <code>60</code>, and a spawn timer with an interval of <code>5.0</code> seconds. Also add an empty <code>enemy_lasers</code> list and an enemy laser speed of <code>300</code>.</div>
-        <div class="step-note">The enemy image is 93x84 pixels. Drawing it at 60x54 keeps the same shape, just smaller. Enemy lasers are the same size as yours, so you can reuse <code>laser_w</code> and <code>laser_h</code>.</div>
+        <div class="step-task">Load <code>enemy.png</code> as <code>"enemy"</code> and <code>enemy_laser.png</code> as <code>"enemy_laser"</code>. Then add variables for the enemies: an empty <code>enemies</code> list, <code>enemy_w</code> and <code>enemy_h</code> for a size of <code>60</code> by <code>54</code>, and <code>enemy_speed</code> for a falling speed of <code>60</code>. Add <code>enemy_spawn_timer</code> starting at <code>0</code> and <code>enemy_spawn_interval</code> set to <code>5.0</code> seconds. Also add an empty <code>enemy_lasers</code> list and <code>enemy_laser_speed</code> set to <code>300</code>.</div>
+        <div class="step-note">The enemy image is 93x84 pixels. Drawing it at 60x54 keeps the same shape, only smaller. Enemy lasers are the same size as yours, so you can reuse <code>laser_w</code> and <code>laser_h</code>.</div>
         <div class="hints-container">
             <div class="hint" hidden>Look at the <code>-- Meteors</code> and <code>-- Spawn timer</code> sections. Your enemy variables follow the same pattern.</div>
             <div class="hint" hidden>Name them <code>enemies</code>, <code>enemy_w</code>, <code>enemy_h</code>, <code>enemy_speed</code>, <code>enemy_spawn_timer</code>, <code>enemy_spawn_interval</code>, <code>enemy_lasers</code>, and <code>enemy_laser_speed</code>. Add the two <code>load_image</code> lines under the other three.</div>
@@ -565,7 +566,7 @@ canvas.assets.load_image("enemy_laser", "enemy_laser.png")</code></pre>
     <!-- Task 2 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Spawn enemies on their own timer</div>
-        <div class="step-task">Write a <code>spawn_enemy()</code> function that adds a new enemy just above the top of the screen. Besides <code>x</code> and <code>y</code>, each enemy needs a <code>start_x</code> (where it sways around), a <code>t</code> (how long it has been alive, starting at <code>0</code>), <code>hp = 2</code>, and a <code>fire_timer</code> set to a random time between <code>1.0</code> and <code>2.0</code> seconds. Then, in <code>update()</code>, use <code>enemy_spawn_timer</code> to call it every <code>enemy_spawn_interval</code> seconds.</div>
+        <div class="step-task">Write a <code>spawn_enemy()</code> function that adds a new enemy right above the top of the screen. Besides <code>x</code> and <code>y</code>, each enemy needs a <code>start_x</code> (where it sways around) and a <code>t</code> (how long it has been alive, starting at <code>0</code>). It also needs <code>hp = 2</code> and a <code>fire_timer</code> set to a random time between <code>1.0</code> and <code>2.0</code> seconds. Then, in <code>update()</code>, use <code>enemy_spawn_timer</code> to call it every <code>enemy_spawn_interval</code> seconds.</div>
         <div class="step-note">The enemy will sway up to 80 pixels left and right of <code>start_x</code>. Pick <code>start_x</code> between <code>80</code> and <code>SCREEN_W - enemy_w - 80</code> so it never swings off the edge.</div>
         <div class="hints-container">
             <div class="hint" hidden>Copy <code>spawn_meteor()</code> and change it. Store the random x in a local <code>start_x</code> first, because you need it twice: for <code>x</code> and for <code>start_x</code>.</div>
@@ -601,7 +602,7 @@ end</code></pre>
     <!-- Task 3 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Fly down and sway</div>
-        <div class="step-task">In <code>update()</code>, loop over the enemies. Add <code>dt</code> to each enemy's <code>t</code>, move it down by <code>enemy_speed</code>, and set its <code>x</code> to <code>start_x</code> plus a sine wave. Remove enemies that fall off the bottom. Then draw every enemy in <code>draw()</code>.</div>
+        <div class="step-task">In <code>update()</code>, loop over the enemies. Add <code>dt</code> to each enemy's <code>t</code>, move it down by <code>enemy_speed</code>, and set its <code>x</code> to <code>start_x</code> plus <code>math.sin(enemy.t * 2) * 80</code> so it sways left and right. Remove enemies that fall off the bottom. Then draw every enemy with the <code>"enemy"</code> image in <code>draw()</code>, before the ship.</div>
         <div class="hints-container">
             <div class="hint" hidden>Use a reverse loop (<code>for i = #enemies, 1, -1</code>) like the meteor loop, because you remove enemies inside it. Writing <code>local enemy = enemies[i]</code> at the top saves a lot of typing.</div>
             <div class="hint" hidden><code>math.sin(enemy.t * 2) * 80</code> swings between <code>-80</code> and <code>80</code>. The <code>* 2</code> makes it sway faster; try other numbers.</div>
@@ -634,7 +635,7 @@ end</code></pre>
     <!-- Task 4 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Fire back</div>
-        <div class="step-task">Write <code>spawn_enemy_laser(x, y)</code> that adds a laser to <code>enemy_lasers</code>. Inside the enemy loop, count each enemy's <code>fire_timer</code> down. When it reaches <code>0</code>, fire a laser from the enemy's nose (bottom middle) and pick a new random <code>fire_timer</code>. Then move enemy lasers <strong>down</strong>, remove the ones that leave the bottom, and draw them with the <code>"enemy_laser"</code> image.</div>
+        <div class="step-task">This task has more pieces than the ones before it, so take it one step at a time. Write <code>spawn_enemy_laser(x, y)</code> that adds a laser to <code>enemy_lasers</code>. Inside the enemy loop, count each enemy's <code>fire_timer</code> down. When it reaches <code>0</code>, fire a laser from the enemy's nose (bottom middle) and pick a new random <code>fire_timer</code> the same way as in Task 2. Then move enemy lasers <strong>down</strong>, remove the ones that leave the bottom, and draw them with the <code>"enemy_laser"</code> image, before the enemies.</div>
         <div class="hints-container">
             <div class="hint" hidden><code>spawn_enemy_laser</code> is a copy of <code>spawn_laser</code> that inserts into <code>enemy_lasers</code>. The enemy laser loop is a copy of your laser loop, but with <code>+</code> instead of <code>-</code> and a check for <code>&gt; SCREEN_H</code>.</div>
             <div class="hint" hidden>Your own lasers start at <code>ship_x + ship_w / 2 - laser_w / 2</code>. An enemy's nose is at <code>enemy.x + enemy_w / 2 - laser_w / 2</code> across and <code>enemy.y + enemy_h</code> down.</div>
@@ -681,7 +682,7 @@ end</code></pre>
         <div class="step-task">After the laser vs meteor check, check your lasers against the enemies. A hit removes the laser and takes <code>1</code> off the enemy's <code>hp</code>. When its <code>hp</code> reaches <code>0</code>, remove the enemy and add <code>5</code> to the score.</div>
         <div class="hints-container">
             <div class="hint" hidden>Start from a copy of the laser vs meteor nested loop. Swap <code>meteors</code> for <code>enemies</code> and use <code>enemy_w</code> and <code>enemy_h</code>.</div>
-            <div class="hint" hidden>Don't remove the enemy straight away. Subtract from <code>enemies[j].hp</code> first, then only remove it <code>if enemies[j].hp &lt;= 0</code>. Keep the <code>break</code> &mdash; that laser is gone.</div>
+            <div class="hint" hidden>Don't remove the enemy right away. Subtract from <code>enemies[j].hp</code> first, then only remove it <code>if enemies[j].hp &lt;= 0</code>. Keep the <code>break</code>, because that laser is gone.</div>
         </div>
         <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
         <div class="solution" hidden>
@@ -708,6 +709,7 @@ end</code></pre>
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 6: Danger! (and a clean reset)</div>
         <div class="step-task">After the ship vs meteor check, end the game if the ship touches an enemy or an enemy laser. Then make <code>reset_game()</code> clear the enemies and enemy lasers and reset the enemy spawn timer.</div>
+        <div class="step-note">If you did Bonus 10: Game States, set <code>state = "game_over"</code> instead of <code>game_over = true</code>, the same way your ship vs meteor check does.</div>
         <div class="hints-container">
             <div class="hint" hidden>These are two more copies of the ship vs meteor loop: one over <code>enemies</code>, one over <code>enemy_lasers</code>. Each sets <code>game_over = true</code> and returns.</div>
             <div class="hint" hidden>In <code>reset_game()</code>, three lines: <code>enemies = {}</code>, <code>enemy_lasers = {}</code>, and <code>enemy_spawn_timer = 0</code>.</div>

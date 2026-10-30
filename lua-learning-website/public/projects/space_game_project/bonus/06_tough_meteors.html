@@ -525,17 +525,17 @@ pre.code-block code {
     <div class="concepts">
         <h2>New Concepts</h2>
         <ul>
-            <li><strong>Hit points (hp)</strong> &mdash; a number stored in each meteor that says how many more hits it can take. A hit subtracts 1. At 0, it's destroyed.</li>
-            <li><strong>Per-meteor flags</strong> &mdash; a <code>true</code>/<code>false</code> field like <code>meteor.tough</code> lets the same code treat some meteors differently.</li>
-            <li><strong>Short effect timers</strong> &mdash; set <code>meteor.flash = 0.1</code> on a hit and count it down with <code>dt</code>. While it's above 0, draw the meteor differently.</li>
-            <li><code>canvas.set_global_alpha(a)</code> &mdash; makes <strong>everything</strong> drawn after it see-through. <code>1</code> is solid, <code>0</code> is invisible. It stays that way until you change it back, so always set it back to <code>1</code>.</li>
+            <li><strong>Hit points (hp)</strong>: a number stored in each meteor that says how many more hits it can take. A hit subtracts 1. At 0, it's destroyed.</li>
+            <li><strong>Per-meteor flags</strong>: a <code>true</code>/<code>false</code> field like <code>meteor.tough</code> lets the same code treat some meteors differently.</li>
+            <li><strong>Short effect timers</strong>: set <code>meteor.flash = 0.1</code> (a tenth of a second) on a hit and count it down with <code>dt</code>. While it's above 0, draw the meteor differently.</li>
+            <li><code>canvas.set_global_alpha(a)</code> makes <strong>everything</strong> drawn after it see-through. <code>1</code> is solid, <code>0</code> is invisible, and a number in between is partly see-through. It stays that way until you change it back, so always set it back to <code>1</code>.</li>
         </ul>
     </div>
 
     <!-- Task 1 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Load the grey meteor and add hp</div>
-        <div class="step-task">Load <code>meteor_grey.png</code> as <code>"meteor_grey"</code>. Then change <code>spawn_meteor()</code> so every meteor gets three new fields: <code>hp = 1</code>, <code>tough = false</code> and <code>flash = 0</code>. One meteor in four should instead be tough: <code>hp = 3</code> and <code>tough = true</code>.</div>
+        <div class="step-task">With your other image-loading lines, load <code>meteor_grey.png</code> as <code>"meteor_grey"</code>. Then change <code>spawn_meteor()</code> so every meteor gets three new fields: <code>hp = 1</code>, <code>tough = false</code> and <code>flash = 0</code>. One meteor in four should instead be tough: <code>hp = 3</code> and <code>tough = true</code>.</div>
         <div class="hints-container">
             <div class="hint" hidden>Add the three fields to the meteor table with their normal values. Then, after the table is made but before <code>table.insert</code>, change them for the unlucky 1 in 4.</div>
             <div class="hint" hidden><code>math.random(1, 4)</code> gives 1, 2, 3 or 4. Checking <code>if math.random(1, 4) == 1 then</code> is true one time in four. Inside, set <code>meteor.hp = 3</code> and <code>meteor.tough = true</code>.</div>
@@ -567,7 +567,7 @@ end</code></pre>
     <!-- Task 2 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Draw tough meteors in grey</div>
-        <div class="step-task">In the meteor drawing loop, draw tough meteors with the <code>"meteor_grey"</code> image and normal meteors with <code>"meteor"</code>.</div>
+        <div class="step-task">In the meteor drawing loop in the DRAW section, draw tough meteors with the <code>"meteor_grey"</code> image and normal meteors with <code>"meteor"</code>. If you did Bonus 5: Meteor Variety, keep each normal meteor's own image and only switch the tough ones to grey. Also keep using <code>meteor.w</code> and <code>meteor.h</code> wherever this page's solutions use <code>meteor_w</code> and <code>meteor_h</code>.</div>
         <div class="hints-container">
             <div class="hint" hidden>Make a local variable for the image name before you call <code>draw_image</code>.</div>
             <div class="hint" hidden>Start with <code>local image = "meteor"</code>. If <code>meteor.tough</code> is true, change it to <code>"meteor_grey"</code>. Then pass <code>image</code> to <code>canvas.draw_image</code> instead of <code>"meteor"</code>.</div>
@@ -589,9 +589,9 @@ end</code></pre>
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Hits take away hp</div>
         <div class="step-task">Change the laser-vs-meteor collision. When a laser hits a meteor, the laser is <strong>always</strong> removed, and the meteor loses 1 hp. Only remove the meteor when its hp reaches 0. A destroyed tough meteor is worth 3 points; a normal one is worth 1.</div>
-        <div class="step-note">Keep the <code>break</code>! Once <code>table.remove(lasers, i)</code> runs, <code>lasers[i]</code> is gone (or is now a different laser), so we must stop checking meteors for it. The <code>break</code> has to happen whether the meteor was destroyed or not.</div>
+        <div class="step-note">Keep the <code>break</code>. Once <code>table.remove(lasers, i)</code> runs, <code>lasers[i]</code> is gone (or is now a different laser), so you need to stop checking meteors for it. The <code>break</code> has to happen whether the meteor was destroyed or not.</div>
         <div class="hints-container">
-            <div class="hint" hidden>Inside the <code>if check_collision(...)</code>, split the work in two: things that happen on <em>every</em> hit (remove the laser, lose hp), and things that only happen when hp is 0 (remove the meteor, add score).</div>
+            <div class="hint" hidden>Inside the <code>if check_collision(...)</code>, split the work in two. Some things happen on <em>every</em> hit: remove the laser and lose hp. Others only happen when hp is 0: remove the meteor and add score.</div>
             <div class="hint" hidden>Writing <code>meteors[j]</code> over and over gets messy. Add <code>local meteor = meteors[j]</code> at the start of the inner loop and use <code>meteor</code> instead.</div>
             <div class="hint" hidden>After <code>table.remove(lasers, i)</code> and <code>meteor.hp = meteor.hp - 1</code>, write <code>if meteor.hp &lt;= 0 then</code>. Inside it, remove the meteor and add <code>3</code> or <code>1</code> to the score depending on <code>meteor.tough</code>. Put the <code>break</code> after that <code>if</code>'s <code>end</code>.</div>
         </div>
@@ -625,11 +625,11 @@ end</code></pre>
     <!-- Task 4 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Blink when hit</div>
-        <div class="step-task">Right now you can't tell if a tough meteor was hit. When a laser hits a meteor, set its <code>flash</code> to <code>0.1</code>. In the meteor movement loop, count <code>flash</code> down by <code>dt</code> (but never below 0). When drawing, if <code>flash</code> is above 0, draw the meteor see-through with <code>canvas.set_global_alpha(0.3)</code>.</div>
+        <div class="step-task">Right now a tough meteor looks the same after a hit as it did before. When a laser hits a meteor, set its <code>flash</code> to <code>0.1</code>. In the meteor movement loop, count <code>flash</code> down by <code>dt</code> (but never below 0). When drawing, if <code>flash</code> is above 0, draw the meteor see-through with <code>canvas.set_global_alpha(0.3)</code>.</div>
         <div class="hints-container">
             <div class="hint" hidden>Add <code>meteor.flash = 0.1</code> next to <code>meteor.hp = meteor.hp - 1</code>. To count down without going below 0, use <code>math.max(0, ...)</code>.</div>
             <div class="hint" hidden>In the movement loop: <code>meteors[i].flash = math.max(0, meteors[i].flash - dt)</code>.</div>
-            <div class="hint" hidden>When drawing: <code>if meteor.flash &gt; 0 then canvas.set_global_alpha(0.3) end</code>, then <code>draw_image</code>, then <strong>always</strong> <code>canvas.set_global_alpha(1)</code> afterwards. If you forget that last line, the ship, the HUD and everything else turns see-through too!</div>
+            <div class="hint" hidden>When drawing: <code>if meteor.flash &gt; 0 then canvas.set_global_alpha(0.3) end</code>, then <code>draw_image</code>, then <strong>always</strong> <code>canvas.set_global_alpha(1)</code> afterwards. Without that last line, the ship, the HUD and everything else turns see-through too. If your whole screen fades, check for this line.</div>
         </div>
         <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
         <div class="solution" hidden>
@@ -653,9 +653,9 @@ canvas.set_global_alpha(1)</code></pre>
     <!-- Task 5 -->
     <div class="step step-challenge">
         <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 5 (optional): Show the hp</div>
-        <div class="step-task">Above each tough meteor, draw one small red rectangle (a &ldquo;pip&rdquo;) for each hp it has left. Make each pip 8 pixels wide and 4 tall, 8 pixels above the meteor, with pips 12 pixels apart.</div>
+        <div class="step-task">In the meteor drawing loop, after <code>canvas.set_global_alpha(1)</code>, draw one small red (255, 80, 80) rectangle (a &ldquo;pip&rdquo;) above each tough meteor for each hp it has left. Make each pip 8 pixels wide and 4 tall, 8 pixels above the meteor. Start the first pip 8 pixels in from the meteor's left edge, with pips 12 pixels apart.</div>
         <div class="hints-container">
-            <div class="hint" hidden>Use a <code>for</code> loop from <code>1</code> to <code>meteor.hp</code>. Each time round the loop, draw one pip a bit further to the right.</div>
+            <div class="hint" hidden>Use a <code>for</code> loop from <code>1</code> to <code>meteor.hp</code>. Each time through the loop, draw one pip a bit further to the right.</div>
             <div class="hint" hidden>Pip number <code>p</code> goes at <code>x = meteor.x + 8 + (p - 1) * 12</code> and <code>y = meteor.y - 8</code>. Three pips then sit centered over the 48-pixel-wide meteor.</div>
         </div>
         <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
